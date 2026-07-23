@@ -23,6 +23,7 @@ permissions:
 jobs:
   integrate-and-verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout feature branch
         uses: actions/checkout@v4
@@ -31,17 +32,17 @@ jobs:
           fetch-depth: 1
           show-progress: false
 
-      - name: Generate SU7 assets
-        run: node scripts/vehicle/generate-su7.mjs
-
-      - name: Inspect SU7 assets
-        run: node scripts/vehicle/inspect-su7.mjs
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.16.0
           cache: npm
+
+      - name: Generate SU7 assets
+        run: node scripts/vehicle/generate-su7.mjs
+
+      - name: Inspect SU7 assets
+        run: node scripts/vehicle/inspect-su7.mjs
 
       - name: Install dependencies
         run: npm ci
