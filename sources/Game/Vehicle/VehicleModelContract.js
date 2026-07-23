@@ -44,6 +44,26 @@ export function validateVehicleModel(model)
     return { valid: missingRequired.length === 0, missingRequired, availableOptional, names }
 }
 
+export function resolveAntennaRig(vehicleScene, antennaObject)
+{
+    if(!vehicleScene || !antennaObject)
+        return null
+
+    const head = vehicleScene.getObjectByName?.('antennaHead')
+    const headAxle = head?.children?.[0]
+    const headReference = antennaObject.getObjectByName?.('antennaHeadReference')
+
+    if(!head || !headAxle || !headReference)
+        return null
+
+    return {
+        object: antennaObject,
+        head,
+        headAxle,
+        headReference,
+    }
+}
+
 export function selectVehicleModel(preferredModel, fallbackModel)
 {
     if(preferredModel)
