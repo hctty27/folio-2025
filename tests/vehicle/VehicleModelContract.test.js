@@ -62,3 +62,28 @@ test('returns a complete antenna rig', () =>
         headReference: reference,
     })
 })
+
+test('removes an incomplete optional antenna before selecting the vehicle', () =>
+{
+    let removed = false
+    const antenna = {
+        name: 'antenna',
+        getObjectByName: () => undefined,
+        removeFromParent: () => { removed = true },
+    }
+    const preferred = {
+        traverse(callback)
+        {
+            for(const name of validNames)
+                callback({ name })
+            callback(antenna)
+        },
+        getObjectByName(name)
+        {
+            return name === 'antenna' ? antenna : undefined
+        },
+    }
+
+    assert.equal(selectVehicleModel(preferred, model(validNames)).source, 'su7')
+    assert.equal(removed, true)
+})
