@@ -31,6 +31,12 @@ jobs:
           fetch-depth: 1
           show-progress: false
 
+      - name: Generate SU7 assets
+        run: node scripts/vehicle/generate-su7.mjs
+
+      - name: Inspect SU7 assets
+        run: node scripts/vehicle/inspect-su7.mjs
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -40,14 +46,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Generate SU7 assets
-        run: node scripts/vehicle/generate-su7.mjs
-
-      - name: Inspect SU7 assets
-        run: node scripts/vehicle/inspect-su7.mjs
-
       - name: Apply integration patch
-        run: node scripts/vehicle/apply-su7-integration.mjs
+        run: |
+          if grep -q "Vehicle/SuspensionMode.js" sources/Game/Game.js; then
+            echo "SU7 integration already applied"
+          else
+            node scripts/vehicle/apply-su7-integration.mjs
+          fi
 
       - name: Run vehicle tests
         run: npm run test:vehicle
