@@ -64,18 +64,31 @@ export function resolveAntennaRig(vehicleScene, antennaObject)
     }
 }
 
+function removeIncompleteOptionalParts(model)
+{
+    const antenna = model?.getObjectByName?.('antenna')
+    if(antenna && !resolveAntennaRig(model, antenna))
+        antenna.removeFromParent?.()
+}
+
+function prepareSelection(model, source, validation)
+{
+    removeIncompleteOptionalParts(model)
+    return { model, source, validation }
+}
+
 export function selectVehicleModel(preferredModel, fallbackModel)
 {
     if(preferredModel)
     {
         const preferredValidation = validateVehicleModel(preferredModel)
         if(preferredValidation.valid)
-            return { model: preferredModel, source: 'su7', validation: preferredValidation }
+            return prepareSelection(preferredModel, 'su7', preferredValidation)
     }
 
     const fallbackValidation = validateVehicleModel(fallbackModel)
     if(!fallbackValidation.valid)
         throw new Error(`Fallback vehicle model is invalid: ${fallbackValidation.missingRequired.join(', ')}`)
 
-    return { model: fallbackModel, source: 'fallback', validation: fallbackValidation }
+    return prepareSelection(fallbackModel, 'fallback', fallbackValidation)
 }
