@@ -29,15 +29,38 @@ function nodeByName(json, name)
     return { index, node: json.nodes[index] }
 }
 
+function positionCount(json, nodeName)
+{
+    const { node } = nodeByName(json, nodeName)
+    assert.equal(typeof node.mesh, 'number', `${nodeName} must be renderable`)
+    const primitive = json.meshes[node.mesh]?.primitives?.[0]
+    const accessor = json.accessors[primitive?.attributes?.POSITION]
+    assert.ok(accessor, `${nodeName} must have POSITION geometry`)
+    return accessor.count
+}
+
 const json = readJsonChunk(await readFile(new URL('../../static/vehicle/su7.glb', import.meta.url)))
 
 test('SU7 uses the game axis convention', () =>
 {
     const { node: body } = nodeByName(json, 'bodyPainted')
-    assert.ok(body.scale[0] > body.scale[2], 'vehicle length must be on X')
-    assert.ok(body.scale[2] > body.scale[1], 'vehicle width must be on Z and height on Y')
-    assert.ok(body.translation[1] > 0, 'body height must be represented on Y')
-    assert.equal(body.translation[2], 0, 'body must be centred laterally on Z')
+    const bodyAccessor = json.accessors[json.meshes[body.mesh].primitives[0].attributes.POSITION]
+    const [ minX, minY, minZ ] = bodyAccessor.min
+    const [ maxX, maxY, maxZ ] = bodyAccessor.max
+    assert.ok(maxX - minX > maxZ - minZ, 'vehicle length must be on X')
+    assert.ok(maxZ - minZ > maxY - minY, 'vehicle width must be on Z and height on Y')
+})
+
+test('SU7 body uses a sculpted multi-section silhouette instead of a cube', () =>
+{
+    assert.ok(positionCount(json, 'bodyPainted') >= 40, 'body must use a multi-section lofted mesh')
+    assert.ok(positionCount(json, 'glass') >= 24, 'glass canopy must follow the fastback roofline')
+})
+
+test('SU7 uses shaped waterdrop headlights', () =>
+{
+    assert.ok(positionCount(json, 'headlights') >= 12, 'left headlight must use a shaped mesh')
+    assert.ok(positionCount(json, 'headlightsRight') >= 12, 'right headlight must use a shaped mesh')
 })
 
 test('SU7 provides a complete antenna rig', () =>
