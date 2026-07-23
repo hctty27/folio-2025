@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { validateVehicleModel, selectVehicleModel } from '../../sources/Game/Vehicle/VehicleModelContract.js'
+import * as vehicleContract from '../../sources/Game/Vehicle/VehicleModelContract.js'
+
+const { validateVehicleModel, selectVehicleModel } = vehicleContract
 
 function model(names)
 {
@@ -31,4 +33,32 @@ test('selects preferred model or falls back', () =>
     assert.equal(selectVehicleModel(preferred, fallback).source, 'su7')
     assert.equal(selectVehicleModel(model([ 'chassis' ]), fallback).source, 'fallback')
     assert.throws(() => selectVehicleModel(null, model([ 'chassis' ])), /Fallback vehicle model is invalid/)
+})
+
+test('ignores an incomplete optional antenna rig', () =>
+{
+    assert.equal(typeof vehicleContract.resolveAntennaRig, 'function')
+
+    const scene = { getObjectByName: () => undefined }
+    const antenna = { getObjectByName: () => undefined }
+
+    assert.equal(vehicleContract.resolveAntennaRig(scene, antenna), null)
+})
+
+test('returns a complete antenna rig', () =>
+{
+    assert.equal(typeof vehicleContract.resolveAntennaRig, 'function')
+
+    const axle = { name: 'antennaAxle' }
+    const head = { name: 'antennaHead', children: [ axle ] }
+    const reference = { name: 'antennaHeadReference' }
+    const scene = { getObjectByName: name => name === 'antennaHead' ? head : undefined }
+    const antenna = { getObjectByName: name => name === 'antennaHeadReference' ? reference : undefined }
+
+    assert.deepEqual(vehicleContract.resolveAntennaRig(scene, antenna), {
+        object: antenna,
+        head,
+        headAxle: axle,
+        headReference: reference,
+    })
 })
