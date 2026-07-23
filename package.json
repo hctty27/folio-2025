@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --mode development",
-    "build": "vite build --mode production && node scripts/prepare-cloudflare-assets.js",
+    "build": "node scripts/verify-cloudflare-source.js && vite build --mode production && node scripts/prepare-cloudflare-assets.js",
     "preview": "vite preview",
     "compress": "node scripts/compress.js static/"
   },
