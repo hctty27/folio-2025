@@ -137,7 +137,7 @@ export class Game
             [
                 [ 'foliageTexture',                        `foliage/foliageSDF.${compressedTextureExtension}${cb}`,                              compressedTextureFormat, (resource) => { resource.minFilter = THREE.NearestFilter; resource.magFilter = THREE.NearestFilter; resource.generateMipmaps = false; } ],
                 [ 'bushesReferences',                      `bushes/bushesReferences${compressedModelSuffix}.glb${cb}`,                           'gltf' ],
-                [ 'vehicleSu7',                           `vehicle/su7${compressedModelSuffix}.glb${cb}`,                                       'gltf', null, { optional: true } ],
+                [ 'vehicleSu7',                           `vehicle/su7${compressedModelSuffix}.glb?cb=2`,                                       'gltf', null, { optional: true } ],
                 [ 'vehicleFallback',                      `vehicle/default${compressedModelSuffix}.glb${cb}`,                                   'gltf' ],
                 [ 'playgroundVisual',                      `playground/playgroundVisual${compressedModelSuffix}.glb${cb}`,                       'gltf' ],
                 [ 'playgroundPhysical',                    `playground/playgroundPhysical${compressedModelSuffix}.glb${cb}`,                     'gltf' ],
