@@ -19,6 +19,17 @@ npm run dev
 npm run build
 ```
 
+## Cloudflare Pages deployment
+
+Use the following settings when connecting this repository to Cloudflare Pages:
+
+- Production branch: `chore/chinese-localization` (or `main` after merging the Chinese localization PR)
+- Build command: `npm run build`
+- Build output directory: `dist`
+- Root directory: `/`
+
+Production defaults are stored in `.env.production`, and Node.js is pinned in `.node-version`.
+
 ## Game loop
 
 #### 0
