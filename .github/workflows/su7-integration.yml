@@ -1,0 +1,55 @@
+name: SU7 Integration
+
+on:
+  push:
+    branches:
+      - feat/xiaomi-su7-vehicle
+    paths:
+      - .github/workflows/su7-integration.yml
+      - scripts/vehicle/**
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/xiaomi-su7-vehicle
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate SU7 assets
+        run: node scripts/vehicle/generate-su7.mjs
+
+      - name: Inspect SU7 assets
+        run: node scripts/vehicle/inspect-su7.mjs
+
+      - name: Apply integration patch
+        run: node scripts/vehicle/apply-su7-integration.mjs
+
+      - name: Run vehicle tests
+        run: npm run test:vehicle
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Commit verified integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json sources static/vehicle/su7.glb static/vehicle/su7-compressed.glb
+          git diff --cached --quiet && exit 0
+          git commit -m "feat: integrate low-poly Xiaomi SU7 vehicle"
+          git push origin HEAD:feat/xiaomi-su7-vehicle
