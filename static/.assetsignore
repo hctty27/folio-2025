@@ -1,3 +1,0 @@
-# Uncompressed music masters are not used by the application.
-# Runtime playback uses the MP3 files in the same directory.
-sounds/musics/*.wav
