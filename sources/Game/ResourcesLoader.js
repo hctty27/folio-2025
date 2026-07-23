@@ -75,7 +75,7 @@ export class ResourcesLoader
             const save = (_file, _resource) =>
             {
                 // Apply modifier
-                if(typeof _file[3] !== 'undefined')
+                if(typeof _file[3] === 'function')
                     _file[3](_resource)
                     
                 // Save in resources object
@@ -88,6 +88,15 @@ export class ResourcesLoader
             // Error
             const error = (_file) =>
             {
+                const options = _file[4] ?? {}
+                if(options.optional)
+                {
+                    console.warn(`Resources > Optional file unavailable ${_file[1]}`)
+                    loadedResources[_file[0]] = null
+                    progress()
+                    return
+                }
+
                 console.log(`Resources > Couldn't load file ${_file[1]}`)
                 reject(_file[1])
             }
@@ -115,7 +124,7 @@ export class ResourcesLoader
                             progress()
                         },
                         undefined,
-                        error
+                        () => error(_file)
                     )
                 }
             }

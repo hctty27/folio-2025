@@ -4,6 +4,7 @@ import { remapClamp, smallestAngle } from './utilities/maths.js'
 import * as THREE from 'three/webgpu'
 import { Inputs } from './Inputs/Inputs.js'
 import { clamp } from 'three/src/math/MathUtils.js'
+import { getSuspensionProfile } from './Vehicle/VehicleProfiles.js'
 
 export class Player
 {
@@ -270,7 +271,10 @@ export class Player
                 this.game.inputs.actions.get('suspensions').active || this.game.inputs.actions.get('suspensionsBack').active || this.game.inputs.actions.get('suspensionsLeft').active || this.game.inputs.actions.get('suspensionsBackLeft').active, // back left
             ]
 
-            const activeState = this.game.inputs.actions.get('suspensions').active ? 'high' : 'mid' // high = jump, mid = lowride
+            const suspensionProfile = getSuspensionProfile(this.game.suspensionMode.current)
+            const activeState = this.game.inputs.actions.get('suspensions').active
+                ? suspensionProfile.allWheelsActiveState
+                : suspensionProfile.partialActiveState
 
             for(let i = 0; i < 4; i++)
                 this.suspensions[i] = activeSuspensions[i] ? activeState : 'low'
@@ -312,8 +316,9 @@ export class Player
         {
             this.game.inputs.nipple.jump()
 
+            const suspensionProfile = getSuspensionProfile(this.game.suspensionMode.current)
             for(let i = 0; i < 4; i++)
-                this.suspensions[i] = 'high'
+                this.suspensions[i] = suspensionProfile.allWheelsActiveState
 
             if(nippleJumpTimeout)
                 clearTimeout(nippleJumpTimeout)

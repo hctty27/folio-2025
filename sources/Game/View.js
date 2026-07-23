@@ -97,6 +97,16 @@ export class View
         }
     }
 
+    applyVehicleProfile(profile)
+    {
+        if(!profile?.camera)
+            return
+
+        this.spherical.radius.edges = { ...profile.camera.radiusEdges }
+        this.spherical.radius.nonIdealRatioOffset = profile.camera.nonIdealRatioOffset
+        this.optimalArea.needsUpdate = true
+    }
+
     toggleMode()
     {
         this.setMode(this.mode === View.MODE_FREE ? View.MODE_DEFAULT : View.MODE_FREE)

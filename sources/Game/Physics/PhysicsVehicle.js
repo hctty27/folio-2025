@@ -2,12 +2,15 @@ import * as THREE from 'three/webgpu'
 import { Game } from '../Game.js'
 import { Events } from '../Events.js'
 import { lerp, remap, remapClamp, smallestAngle } from '../utilities/maths.js'
+import { getSuspensionProfile } from '../Vehicle/VehicleProfiles.js'
 
 export class PhysicsVehicle
 {
-    constructor()
+    constructor(profile = null)
     {
         this.game = Game.getInstance()
+        this.profile = profile ?? this.game.vehicleProfile
+        this.suspensionProfile = getSuspensionProfile(this.game.suspensionMode.current)
 
         this.events = new Events()
 
@@ -28,16 +31,8 @@ export class PhysicsVehicle
         this.velocity = new THREE.Vector3()
         this.direction = this.forward.clone()
         this.speed = 0
-        this.suspensionsHeights = {
-            low: 0.88,
-            mid: 1.23,
-            high: 1.63
-        }
-        this.suspensionsStiffness = {
-            low: 20,
-            mid: 30,
-            high: 40
-        }
+        this.suspensionsHeights = { ...this.suspensionProfile.heights }
+        this.suspensionsStiffness = { ...this.suspensionProfile.stiffness }
 
         // Debug
         if(this.game.debug.active)
@@ -68,6 +63,7 @@ export class PhysicsVehicle
         this.setChassis()
         this.controller = this.game.physics.world.createVehicleController(this.chassis.physical.body)
         this.setWheels()
+        this.game.suspensionMode.events.on('change', (mode) => this.applySuspensionProfile(mode))
         this.setStop()
         this.setUpsideDown()
         this.setStuck()
@@ -92,11 +88,12 @@ export class PhysicsVehicle
             position: this.position,
             friction: 0.4,
             rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Euler(0, 1, 0), Math.PI * 0),
-            colliders: [
-                { shape: 'cuboid', mass: 2.5, parameters: [ 1.3, 0.4, 0.85 ], position: { x: 0, y: -0.1, z: 0 }, centerOfMass: { x: 0, y: -0.5, z: 0 } }, // Main
-                { shape: 'cuboid', mass: 0, parameters: [ 0.5, 0.15, 0.65 ], position: { x: 0, y: 0.4, z: 0 } }, // Top
-                { shape: 'cuboid', mass: 0, parameters: [ 1.5, 0.5, 0.9 ], position: { x: 0.1, y: -0.2, z: 0 }, category: 'bumper' }, // Bumper
-            ],
+            colliders: this.profile.colliders.map((collider) => ({
+                ...collider,
+                parameters: [ ...collider.parameters ],
+                position: { ...collider.position },
+                ...(collider.centerOfMass ? { centerOfMass: { ...collider.centerOfMass } } : {}),
+            })),
             canSleep: false,
             waterGravityMultiplier: 0,
             onCollision: (force, position) =>
@@ -138,16 +135,16 @@ export class PhysicsVehicle
 
         // Settings
         this.wheels.settings = {
-            offset: { x: 0.90, y: 0, z: 0.75 },
-            radius: 0.4,
+            offset: { ...this.profile.wheels.offset },
+            radius: this.profile.wheels.radius,
             directionCs: { x: 0, y: -1, z: 0 },
             axleCs: { x: 0, y: 0, z: 1 },
             frictionSlip: 0.9,
-            maxSuspensionForce: 150,
-            maxSuspensionTravel: 2,
-            sideFrictionStiffness: 3,
-            suspensionCompression: 10,
-            suspensionRelaxation: 2.7,
+            maxSuspensionForce: this.suspensionProfile.maxSuspensionForce,
+            maxSuspensionTravel: this.suspensionProfile.maxSuspensionTravel,
+            sideFrictionStiffness: this.suspensionProfile.sideFrictionStiffness,
+            suspensionCompression: this.suspensionProfile.suspensionCompression,
+            suspensionRelaxation: this.suspensionProfile.suspensionRelaxation,
             suspensionStiffness: 25,
         }
 
@@ -198,6 +195,22 @@ export class PhysicsVehicle
             this.debugPanel.addBinding(this.wheels.settings, 'suspensionRelaxation', { min: 0, max: 10, step: 0.01 }).on('change', this.wheels.updateSettings)
             this.debugPanel.addBinding(this.wheels.settings, 'suspensionStiffness', { min: 0, max: 100, step: 0.1 }).on('change', this.wheels.updateSettings)
         }
+    }
+
+    applySuspensionProfile(mode)
+    {
+        this.suspensionProfile = getSuspensionProfile(mode)
+        this.suspensionsHeights = { ...this.suspensionProfile.heights }
+        this.suspensionsStiffness = { ...this.suspensionProfile.stiffness }
+
+        Object.assign(this.wheels.settings, {
+            maxSuspensionForce: this.suspensionProfile.maxSuspensionForce,
+            maxSuspensionTravel: this.suspensionProfile.maxSuspensionTravel,
+            sideFrictionStiffness: this.suspensionProfile.sideFrictionStiffness,
+            suspensionCompression: this.suspensionProfile.suspensionCompression,
+            suspensionRelaxation: this.suspensionProfile.suspensionRelaxation,
+        })
+        this.wheels.updateSettings()
     }
 
     setStop()

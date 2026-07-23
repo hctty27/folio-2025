@@ -48,6 +48,9 @@ import { PreRenderer } from './PreRenderer.js'
 import { Options } from './Options.js'
 import gsap from 'gsap'
 import { Map } from './Map.js'
+import { SuspensionMode } from './Vehicle/SuspensionMode.js'
+import { selectVehicleModel } from './Vehicle/VehicleModelContract.js'
+import { getVehicleProfile } from './Vehicle/VehicleProfiles.js'
 
 export class Game
 {
@@ -87,6 +90,7 @@ export class Game
         this.inputs = new Inputs([], [ 'intro' ])
         this.audio = new Audio()
         this.notifications = new Notifications()
+        this.suspensionMode = new SuspensionMode({ inputs: this.inputs, notifications: this.notifications })
         this.rayCursor = new RayCursor()
         this.viewport = new Viewport(this.domElement)
         this.modals = new Modals()
@@ -133,7 +137,8 @@ export class Game
             [
                 [ 'foliageTexture',                        `foliage/foliageSDF.${compressedTextureExtension}${cb}`,                              compressedTextureFormat, (resource) => { resource.minFilter = THREE.NearestFilter; resource.magFilter = THREE.NearestFilter; resource.generateMipmaps = false; } ],
                 [ 'bushesReferences',                      `bushes/bushesReferences${compressedModelSuffix}.glb${cb}`,                           'gltf' ],
-                [ 'vehicle',                               `vehicle/default${compressedModelSuffix}.glb${cb}`,                                   'gltf' ],
+                [ 'vehicleSu7',                           `vehicle/su7${compressedModelSuffix}.glb${cb}`,                                       'gltf', null, { optional: true } ],
+                [ 'vehicleFallback',                      `vehicle/default${compressedModelSuffix}.glb${cb}`,                                   'gltf' ],
                 [ 'playgroundVisual',                      `playground/playgroundVisual${compressedModelSuffix}.glb${cb}`,                       'gltf' ],
                 [ 'playgroundPhysical',                    `playground/playgroundPhysical${compressedModelSuffix}.glb${cb}`,                     'gltf' ],
                 [ 'flowersReferencesModel',                `flowers/flowersReferences${compressedModelSuffix}.glb${cb}`,                         'gltf' ],
@@ -181,11 +186,15 @@ export class Game
         const [ newResources, RAPIER ] = await Promise.all([ resourcesPromise, rapierPromise ])
         this.RAPIER = RAPIER
         this.resources = { ...newResources, ...this.resources }
+        this.vehicleSelection = selectVehicleModel(this.resources.vehicleSu7?.scene ?? null, this.resources.vehicleFallback.scene)
+        this.vehicleProfile = getVehicleProfile(this.vehicleSelection.source)
+        this.resources.vehicle = { scene: this.vehicleSelection.model }
+        this.view.applyVehicleProfile(this.vehicleProfile)
 
         this.terrain = new Terrain()
         this.physics = new Physics()
         this.wireframe = new PhysicsWireframe()
-        this.physicalVehicle = new PhysicsVehicle()
+        this.physicalVehicle = new PhysicsVehicle(this.vehicleProfile)
         this.zones = new Zones()
         this.player = new Player()
         this.closingManager = new ClosingManager()

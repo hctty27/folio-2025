@@ -9,6 +9,7 @@ export class Options
 
         this.setSound()
         this.setQuality()
+        this.setSuspensionMode()
         this.setRespawn()
         this.setReset()
         this.setRenderer()
@@ -37,6 +38,20 @@ export class Options
         {
             text.textContent = this.game.quality.level === 0 ? 'High' : 'Low'
         })
+    }
+
+    setSuspensionMode()
+    {
+        const element = this.element.querySelector('.js-suspension-mode-toggle')
+        const text = element.querySelector('span')
+        const update = (mode) =>
+        {
+            text.textContent = mode === 'realistic' ? '写实' : '娱乐'
+        }
+
+        update(this.game.suspensionMode.current)
+        element.addEventListener('click', () => this.game.suspensionMode.toggle())
+        this.game.suspensionMode.events.on('change', update)
     }
 
     setRespawn()

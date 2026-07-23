@@ -53,7 +53,8 @@ export class World
         }
         else if(step === 1)
         {
-            this.visualVehicle = new VisualVehicle(this.game.resources.vehicle.scene)
+            this.vehicleSource = this.game.vehicleSelection.source
+            this.visualVehicle = new VisualVehicle(this.game.vehicleSelection.model)
             this.floor = new Floor()
             this.waterSurface = new WaterSurface()
             this.grass = new Grass()

@@ -7,6 +7,7 @@ import { cameraPosition, color, Fn, min, mix, normalWorld, positionViewDirection
 import { clamp } from 'three/src/math/MathUtils.js'
 import gsap from 'gsap'
 import { MeshDefaultMaterial } from '../Materials/MeshDefaultMaterial.js'
+import { VEHICLE_PROFILE } from '../Vehicle/VehicleProfiles.js'
 
 export class VisualVehicle
 {
@@ -15,6 +16,7 @@ export class VisualVehicle
         this.game = Game.getInstance()
         
         this.model = model
+        this.profile = this.game.vehicleSelection.source === 'su7' ? VEHICLE_PROFILE : this.game.vehicleProfile
 
         this.setParts()
         this.setMainGroundTrack()
@@ -376,14 +378,22 @@ export class VisualVehicle
         this.boostTrails.instance = new Trails()
 
         this.boostTrails.leftReference = new THREE.Object3D()
-        this.boostTrails.leftReference.position.set(-1.28, 0.1, -0.55)
+        this.boostTrails.leftReference.position.set(
+            this.profile.effects.boostLeft.x,
+            this.profile.effects.boostLeft.y,
+            this.profile.effects.boostLeft.z,
+        )
         this.parts.chassis.add(this.boostTrails.leftReference)
 
         this.boostTrails.left = this.boostTrails.instance.create()
         this.boostTrails.leftReference.getWorldPosition(this.boostTrails.left.position)
     
         this.boostTrails.rightReference = new THREE.Object3D()
-        this.boostTrails.rightReference.position.set(-1.28, 0.1, 0.55)
+        this.boostTrails.rightReference.position.set(
+            this.profile.effects.boostRight.x,
+            this.profile.effects.boostRight.y,
+            this.profile.effects.boostRight.z,
+        )
         this.parts.chassis.add(this.boostTrails.rightReference)
 
         this.boostTrails.right = this.boostTrails.instance.create()
