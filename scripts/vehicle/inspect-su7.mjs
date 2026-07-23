@@ -8,6 +8,9 @@ const paths = [
 const requiredNames = [
     'chassis',
     'bodyPainted',
+    'glass',
+    'headlights',
+    'headlightsRight',
     'wheelContainer',
     'wheelSuspension',
     'wheelCylinder',
@@ -51,12 +54,14 @@ function nodeByName(json, name)
     return { index, node: json.nodes[index] }
 }
 
-function assertRenderable(json, name)
+function positionAccessor(json, name)
 {
     const { node } = nodeByName(json, name)
     const primitive = json.meshes?.[node.mesh]?.primitives?.[0]
-    if(typeof node.mesh !== 'number' || typeof primitive?.material !== 'number')
-        throw new Error(`${name} must be a renderable mesh with a material`)
+    const accessor = json.accessors?.[primitive?.attributes?.POSITION]
+    if(typeof node.mesh !== 'number' || typeof primitive?.material !== 'number' || !accessor)
+        throw new Error(`${name} must be a renderable mesh with POSITION geometry and a material`)
+    return accessor
 }
 
 for(const path of paths)
@@ -69,9 +74,19 @@ for(const path of paths)
     for(const name of requiredNames)
         nodeByName(json, name)
 
-    const { node: body } = nodeByName(json, 'bodyPainted')
-    if(!(body.scale[0] > body.scale[2] && body.scale[2] > body.scale[1]))
+    const body = positionAccessor(json, 'bodyPainted')
+    const bodyLength = body.max[0] - body.min[0]
+    const bodyHeight = body.max[1] - body.min[1]
+    const bodyWidth = body.max[2] - body.min[2]
+    if(!(bodyLength > bodyWidth && bodyWidth > bodyHeight))
         throw new Error('SU7 body axes must be X length, Y height and Z width')
+    if(body.count < 40)
+        throw new Error(`SU7 body must be sculpted, found only ${body.count} vertices`)
+
+    if(positionAccessor(json, 'glass').count < 24)
+        throw new Error('SU7 glass must follow a multi-section fastback roofline')
+    if(positionAccessor(json, 'headlights').count < 12 || positionAccessor(json, 'headlightsRight').count < 12)
+        throw new Error('SU7 headlights must use shaped waterdrop meshes')
 
     const { node: antenna } = nodeByName(json, 'antenna')
     const { index: referenceIndex } = nodeByName(json, 'antennaHeadReference')
@@ -83,7 +98,7 @@ for(const path of paths)
         throw new Error('antennaHead must contain antennaHeadAxle')
 
     for(const name of [ 'energy', 'cell1', 'cell2', 'cell3', 'antennaHeadAxle' ])
-        assertRenderable(json, name)
+        positionAccessor(json, name)
 
     const { node: wheel } = nodeByName(json, 'wheelCylinder')
     if(wheel.rotation)
