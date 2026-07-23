@@ -2,60 +2,60 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 将默认可驾驶车辆替换为雅灰低多边形 2024 小米 SU7 Pro，并新增可持久化的写实／娱乐双悬架模式，支持设置菜单与 `J` 键切换，同时保持 `H` 鸣笛和原有玩法。
+**Goal:** 将默认可驾驶车辆替换为雅灰低多边形 2024 小米 SU7 Pro，并新增可持久化的写实／娱乐双悬架模式；`J` 切换模式，`H` 保持鸣笛。
 
-**Architecture:** 保留原项目 `VisualVehicle`、`PhysicsVehicle` 与 `Player` 的职责边界，新增纯状态组件 `SuspensionMode`、纯配置模块 `VehicleProfiles` 和模型契约验证器 `VehicleModelContract`。SU7 与原车模型同时加载：SU7 是首选资源，加载或节点校验失败时回退原车；物理参数、输入行为和相机参数均由集中配置驱动。
+**Architecture:** 保留 `VisualVehicle`、`PhysicsVehicle` 和 `Player` 的现有职责。新增三个小模块：`SuspensionMode` 管理状态与输入，`VehicleProfiles` 集中管理 SU7 和悬架参数，`VehicleModelContract` 验证 GLB 节点并选择 SU7 或原车回退。SU7 与原车同时加载；SU7 加载失败或节点不完整时继续使用原车。
 
-**Tech Stack:** JavaScript ES modules、Three.js 0.183、Rapier3D 0.17、Node.js 22、Node Test Runner、Vite 7、Blender glTF 2.0 导出、gltf-transform CLI、Cloudflare Workers Static Assets。
+**Tech Stack:** JavaScript ES modules、Three.js 0.183、Rapier3D 0.17、Node.js 22、Node Test Runner、Vite 7、Blender glTF 2.0、gltf-transform CLI、Cloudflare Workers Static Assets。
 
 ## Global Constraints
 
-- 基线分支：`main`，设计文档：`docs/superpowers/specs/2026-07-23-xiaomi-su7-vehicle-design.md`。
-- 不新增运行时 npm 依赖；仅使用仓库已有的 `three`、`@gltf-transform/*`、Rapier 和 Node 内置模块。
-- 默认车型：2024 小米 SU7 Pro，低多边形卡通风格，雅灰，19 英寸低风阻轮毂。
-- 默认悬架模式：`realistic`；另一模式：`fun`。
-- `J` 只切换悬架模式；`H` 继续只负责鸣笛。
-- 状态键固定为 `localStorage.vehicleSuspensionMode`。
-- SU7 模型必需节点：`chassis`、`bodyPainted`、`wheelContainer`、`wheelSuspension`、`wheelCylinder`、`wheelPainted`。
-- SU7 模型可选节点：`blinkerLeft`、`blinkerRight`、`stopLights`、`backLights`、`antenna`、`cell1`、`cell2`、`cell3`、`energy`。
-- 整车三角面目标 8,000–20,000，硬上限 30,000；材质不超过 8；压缩后 GLB 目标小于 2 MiB、硬上限 5 MiB。
-- 所有 Cloudflare 静态文件必须小于 25 MiB。
-- 原始车辆 `static/vehicle/default.glb` 与 `default-compressed.glb` 保留作为回退，不覆盖、不删除。
-- 每个任务独立测试、独立提交；禁止在同一提交夹带中文化、地图或其他无关改动。
+- 设计基准：`docs/superpowers/specs/2026-07-23-xiaomi-su7-vehicle-design.md`。
+- 开发必须在分支 `feat/xiaomi-su7-vehicle` 和独立 worktree 中进行，不直接在 `main` 实现。
+- 不新增运行时 npm 依赖。
+- 默认车型：2024 小米 SU7 Pro；低多边形卡通风格；雅灰；19 英寸低风阻轮毂。
+- 悬架模式仅允许 `realistic`、`fun`；默认 `realistic`。
+- 持久化键固定为 `vehicleSuspensionMode`。
+- `J` 只切换悬架模式；`H` 继续只鸣笛。
+- 必需节点按名称前缀匹配：`chassis`、`bodyPainted`、`wheelContainer`、`wheelSuspension`、`wheelCylinder`、`wheelPainted`。
+- 可选节点按名称前缀匹配：`blinkerLeft`、`blinkerRight`、`stopLights`、`backLights`、`antenna`、`cell1`、`cell2`、`cell3`、`energy`。
+- 原车 `static/vehicle/default.glb` 与 `static/vehicle/default-compressed.glb` 必须保留作为回退。
+- SU7 压缩后 GLB 硬上限 5 MiB；所有静态文件必须小于 Cloudflare 的 25 MiB 单文件限制。
+- 每个任务先写失败测试，再做最小实现，再独立提交。
 
 ---
 
-## 文件结构
+## File Map
 
-### 新建
+### Create
 
-- `sources/Game/Vehicle/SuspensionMode.js`：管理模式、持久化、快捷键和变更事件。
-- `sources/Game/Vehicle/VehicleProfiles.js`：集中定义 SU7 尺寸、碰撞体、轮位、相机与两套悬架参数。
-- `sources/Game/Vehicle/VehicleModelContract.js`：验证 GLB 节点并选择 SU7 或回退模型。
-- `tests/vehicle/SuspensionMode.test.js`：模式状态与持久化单元测试。
-- `tests/vehicle/VehicleProfiles.test.js`：参数完整性和模式差异单元测试。
-- `tests/vehicle/VehicleModelContract.test.js`：必需／可选节点和回退选择测试。
-- `scripts/vehicle/generate-su7.py`：可重复生成雅灰低多边形 SU7 原始 GLB 的 Blender Python 脚本。
-- `static/vehicle/su7.glb`：未压缩 SU7 模型。
-- `static/vehicle/su7-compressed.glb`：生产使用的压缩 SU7 模型。
+- `sources/Game/Vehicle/VehicleProfiles.js`
+- `sources/Game/Vehicle/SuspensionMode.js`
+- `sources/Game/Vehicle/VehicleModelContract.js`
+- `tests/vehicle/VehicleProfiles.test.js`
+- `tests/vehicle/SuspensionMode.test.js`
+- `tests/vehicle/VehicleModelContract.test.js`
+- `scripts/vehicle/generate-su7.py`
+- `static/vehicle/su7.glb`
+- `static/vehicle/su7-compressed.glb`
 
-### 修改
+### Modify
 
-- `package.json`：增加测试、模型生成与车辆资源校验脚本。
-- `sources/Game/Game.js`：加载 SU7 与原车回退资源，初始化 `SuspensionMode`。
-- `sources/Game/ResourcesLoader.js`：支持可选资源加载失败后继续构建资源集合。
-- `sources/Game/World/World.js`：验证并选择车辆模型。
-- `sources/Game/World/VisualVehicle.js`：安全处理可选节点、SU7 灯光和挂点。
-- `sources/Game/Physics/PhysicsVehicle.js`：应用 SU7 碰撞体、轮位和悬架 profile。
-- `sources/Game/Player.js`：根据模式决定悬架动作状态，并绑定 `J` 以外的原有输入。
-- `sources/Game/View.js`：读取 SU7 相机 profile。
-- `sources/Game/Options.js`：同步设置菜单按钮。
-- `sources/index.html`：增加悬架模式设置行。
-- `sources/i18n-zh.js`：增加悬架相关中文词条。
+- `package.json`
+- `sources/Game/Game.js`
+- `sources/Game/ResourcesLoader.js`
+- `sources/Game/World/World.js`
+- `sources/Game/World/VisualVehicle.js`
+- `sources/Game/Physics/PhysicsVehicle.js`
+- `sources/Game/Player.js`
+- `sources/Game/View.js`
+- `sources/Game/Options.js`
+- `sources/index.html`
+- `sources/i18n-zh.js`
 
 ---
 
-### Task 1: 建立测试入口与集中车辆配置
+### Task 1: Test Harness and Vehicle Profiles
 
 **Files:**
 - Create: `sources/Game/Vehicle/VehicleProfiles.js`
@@ -63,10 +63,10 @@
 - Modify: `package.json:8-13`
 
 **Interfaces:**
-- Produces: `VEHICLE_PROFILE`, `SUSPENSION_MODES`, `getSuspensionProfile(mode)`。
-- Consumers: `PhysicsVehicle`、`Player`、`View`、后续测试。
+- Produces: `SUSPENSION_MODES`, `VEHICLE_PROFILE`, `getSuspensionProfile(mode)`。
+- Consumers: `SuspensionMode`、`PhysicsVehicle`、`Player`、`View`。
 
-- [ ] **Step 1: 在 `package.json` 增加测试命令**
+- [ ] **Step 1: Add test commands to `package.json`**
 
 ```json
 {
@@ -81,9 +81,10 @@
 }
 ```
 
-- [ ] **Step 2: 写失败测试 `tests/vehicle/VehicleProfiles.test.js`**
+- [ ] **Step 2: Write failing profile tests**
 
 ```js
+// tests/vehicle/VehicleProfiles.test.js
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
@@ -92,51 +93,40 @@ import {
     getSuspensionProfile,
 } from '../../sources/Game/Vehicle/VehicleProfiles.js'
 
-test('SU7 profile exposes fixed dimensions and wheel geometry', () =>
+test('SU7 wheel and camera profile is stable', () =>
 {
     assert.deepEqual(VEHICLE_PROFILE.wheels.offset, { x: 1.35, y: 0, z: 0.76 })
     assert.equal(VEHICLE_PROFILE.wheels.radius, 0.43)
     assert.deepEqual(VEHICLE_PROFILE.camera.radiusEdges, { min: 17, max: 34 })
 })
 
-test('realistic and fun suspension profiles are complete and distinct', () =>
+test('realistic profile is less extreme than fun profile', () =>
 {
     const realistic = getSuspensionProfile(SUSPENSION_MODES.REALISTIC)
     const fun = getSuspensionProfile(SUSPENSION_MODES.FUN)
 
-    for(const profile of [ realistic, fun ])
-    {
-        assert.deepEqual(Object.keys(profile.heights), [ 'low', 'mid', 'high' ])
-        assert.deepEqual(Object.keys(profile.stiffness), [ 'low', 'mid', 'high' ])
-        assert.ok(profile.maxSuspensionTravel > 0)
-        assert.ok(profile.suspensionCompression > 0)
-        assert.ok(profile.suspensionRelaxation > 0)
-    }
-
     assert.ok(realistic.heights.high < fun.heights.high)
     assert.ok(realistic.maxSuspensionTravel < fun.maxSuspensionTravel)
+    assert.equal(realistic.allWheelsActiveState, 'mid')
+    assert.equal(fun.allWheelsActiveState, 'high')
 })
 
-test('unknown suspension mode falls back to realistic', () =>
+test('unknown mode falls back to realistic', () =>
 {
     assert.equal(
-        getSuspensionProfile('unknown'),
+        getSuspensionProfile('invalid'),
         getSuspensionProfile(SUSPENSION_MODES.REALISTIC),
     )
 })
 ```
 
-- [ ] **Step 3: 运行测试并确认失败**
+- [ ] **Step 3: Run the failing test**
 
-Run:
+Run: `npm run test:vehicle`
 
-```bash
-npm run test:vehicle
-```
+Expected: FAIL with `Cannot find module .../VehicleProfiles.js`。
 
-Expected: FAIL，错误包含 `Cannot find module .../VehicleProfiles.js`。
-
-- [ ] **Step 4: 创建 `sources/Game/Vehicle/VehicleProfiles.js`**
+- [ ] **Step 4: Implement `VehicleProfiles.js`**
 
 ```js
 export const SUSPENSION_MODES = Object.freeze({
@@ -144,8 +134,8 @@ export const SUSPENSION_MODES = Object.freeze({
     FUN: 'fun',
 })
 
-const suspensionProfiles = Object.freeze({
-    [SUSPENSION_MODES.REALISTIC]: Object.freeze({
+const profiles = Object.freeze({
+    realistic: Object.freeze({
         heights: Object.freeze({ low: 0.82, mid: 0.94, high: 1.08 }),
         stiffness: Object.freeze({ low: 34, mid: 36, high: 38 }),
         maxSuspensionForce: 180,
@@ -156,7 +146,7 @@ const suspensionProfiles = Object.freeze({
         allWheelsActiveState: 'mid',
         partialActiveState: 'mid',
     }),
-    [SUSPENSION_MODES.FUN]: Object.freeze({
+    fun: Object.freeze({
         heights: Object.freeze({ low: 0.88, mid: 1.23, high: 1.63 }),
         stiffness: Object.freeze({ low: 20, mid: 30, high: 40 }),
         maxSuspensionForce: 150,
@@ -170,7 +160,6 @@ const suspensionProfiles = Object.freeze({
 })
 
 export const VEHICLE_PROFILE = Object.freeze({
-    name: 'xiaomi-su7-pro-2024',
     colliders: Object.freeze([
         Object.freeze({
             shape: 'cuboid',
@@ -210,120 +199,102 @@ export const VEHICLE_PROFILE = Object.freeze({
 
 export function getSuspensionProfile(mode)
 {
-    return suspensionProfiles[mode] ?? suspensionProfiles[SUSPENSION_MODES.REALISTIC]
+    return profiles[mode] ?? profiles.realistic
 }
 ```
 
-- [ ] **Step 5: 运行测试并确认通过**
-
-Run:
+- [ ] **Step 5: Verify and commit**
 
 ```bash
 npm run test:vehicle
-```
-
-Expected: 3 tests PASS，0 FAIL。
-
-- [ ] **Step 6: 提交**
-
-```bash
 git add package.json sources/Game/Vehicle/VehicleProfiles.js tests/vehicle/VehicleProfiles.test.js
 git commit -m "test: define SU7 vehicle profiles"
 ```
 
+Expected: 3 PASS，0 FAIL。
+
 ---
 
-### Task 2: 实现悬架模式状态、持久化与 `J` 键切换
+### Task 2: Suspension Mode State and J Shortcut
 
 **Files:**
 - Create: `sources/Game/Vehicle/SuspensionMode.js`
 - Create: `tests/vehicle/SuspensionMode.test.js`
-- Modify: `sources/Game/Game.js:3-112`
+- Modify: `sources/Game/Game.js`
 
 **Interfaces:**
-- Consumes: `SUSPENSION_MODES` from `VehicleProfiles.js`。
-- Produces: `new SuspensionMode({ storage, inputs, notifications })`、`.current`、`.set(mode)`、`.toggle()`、`.events`。
-- Consumers: `Options`、`PhysicsVehicle`、`Player`。
+- Produces: `SuspensionMode.current`、`.set(mode)`、`.toggle()`、`.events`。
+- Consumes: `inputs.addActions()`、`inputs.events`、`notifications.show()`。
 
-- [ ] **Step 1: 写失败测试 `tests/vehicle/SuspensionMode.test.js`**
+- [ ] **Step 1: Write failing state tests**
 
 ```js
+// tests/vehicle/SuspensionMode.test.js
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { SuspensionMode } from '../../sources/Game/Vehicle/SuspensionMode.js'
-import { SUSPENSION_MODES } from '../../sources/Game/Vehicle/VehicleProfiles.js'
 
-function createStorage(initial = {})
+function storage(initial = {})
 {
     const values = new Map(Object.entries(initial))
     return {
-        getItem: key => values.has(key) ? values.get(key) : null,
+        getItem: key => values.get(key) ?? null,
         setItem: (key, value) => values.set(key, value),
     }
 }
 
-function createInputs()
+function inputs()
 {
     const listeners = new Map()
     return {
         actions: [],
-        addActions(actions) { this.actions.push(...actions) },
-        events: {
-            on(name, callback) { listeners.set(name, callback) },
-        },
+        addActions(items) { this.actions.push(...items) },
+        events: { on(name, callback) { listeners.set(name, callback) } },
         fire(name, action) { listeners.get(name)?.(action) },
     }
 }
 
-test('defaults to realistic and persists explicit changes', () =>
+test('defaults to realistic and persists fun', () =>
 {
-    const storage = createStorage()
-    const mode = new SuspensionMode({ storage })
-
-    assert.equal(mode.current, SUSPENSION_MODES.REALISTIC)
-    mode.set(SUSPENSION_MODES.FUN)
-    assert.equal(storage.getItem('vehicleSuspensionMode'), SUSPENSION_MODES.FUN)
+    const store = storage()
+    const value = new SuspensionMode({ storage: store })
+    assert.equal(value.current, 'realistic')
+    value.set('fun')
+    assert.equal(store.getItem('vehicleSuspensionMode'), 'fun')
 })
 
-test('restores fun and rejects unknown persisted values', () =>
+test('invalid stored value falls back to realistic', () =>
 {
-    assert.equal(
-        new SuspensionMode({ storage: createStorage({ vehicleSuspensionMode: 'fun' }) }).current,
-        SUSPENSION_MODES.FUN,
-    )
-    assert.equal(
-        new SuspensionMode({ storage: createStorage({ vehicleSuspensionMode: 'broken' }) }).current,
-        SUSPENSION_MODES.REALISTIC,
-    )
+    const value = new SuspensionMode({
+        storage: storage({ vehicleSuspensionMode: 'broken' }),
+    })
+    assert.equal(value.current, 'realistic')
 })
 
-test('J action toggles once on active event and does not claim H', () =>
+test('J toggles and H is not claimed', () =>
 {
-    const inputs = createInputs()
-    const mode = new SuspensionMode({ storage: createStorage(), inputs })
+    const input = inputs()
+    const value = new SuspensionMode({ storage: storage(), inputs: input })
 
-    assert.deepEqual(inputs.actions, [{
+    assert.deepEqual(input.actions, [{
         name: 'suspensionModeToggle',
         categories: [ 'wandering', 'racing' ],
         keys: [ 'Keyboard.KeyJ' ],
     }])
 
-    inputs.fire('suspensionModeToggle', { active: false })
-    assert.equal(mode.current, SUSPENSION_MODES.REALISTIC)
-
-    inputs.fire('suspensionModeToggle', { active: true })
-    assert.equal(mode.current, SUSPENSION_MODES.FUN)
-    assert.equal(inputs.actions.some(action => action.keys.includes('Keyboard.KeyH')), false)
+    input.fire('suspensionModeToggle', { active: true })
+    assert.equal(value.current, 'fun')
+    assert.equal(input.actions.some(item => item.keys.includes('Keyboard.KeyH')), false)
 })
 ```
 
-- [ ] **Step 2: 运行测试并确认失败**
+- [ ] **Step 2: Run test and confirm failure**
 
 Run: `npm run test:vehicle`
 
-Expected: FAIL，错误包含 `Cannot find module .../SuspensionMode.js`。
+Expected: FAIL because `SuspensionMode.js` does not exist。
 
-- [ ] **Step 3: 创建 `sources/Game/Vehicle/SuspensionMode.js`**
+- [ ] **Step 3: Implement `SuspensionMode.js`**
 
 ```js
 import { Events } from '../Events.js'
@@ -334,11 +305,7 @@ const validModes = new Set(Object.values(SUSPENSION_MODES))
 
 export class SuspensionMode
 {
-    constructor({
-        storage = globalThis.localStorage,
-        inputs = null,
-        notifications = null,
-    } = {})
+    constructor({ storage = globalThis.localStorage, inputs = null, notifications = null } = {})
     {
         this.storage = storage
         this.inputs = inputs
@@ -347,7 +314,7 @@ export class SuspensionMode
         this.current = this.read()
 
         if(this.inputs)
-            this.setInput()
+            this.bindInput()
     }
 
     read()
@@ -363,7 +330,7 @@ export class SuspensionMode
         }
     }
 
-    setInput()
+    bindInput()
     {
         this.inputs.addActions([{
             name: 'suspensionModeToggle',
@@ -385,35 +352,24 @@ export class SuspensionMode
             return false
 
         this.current = next
-        try
-        {
-            this.storage?.setItem(STORAGE_KEY, next)
-        }
-        catch
-        {
-            // Memory state remains authoritative when storage is unavailable.
-        }
+        try { this.storage?.setItem(STORAGE_KEY, next) } catch {}
 
         this.events.trigger('change', [ next ])
-        this.showNotification(next)
+        this.notify(next)
         return true
     }
 
     toggle()
     {
-        return this.set(
-            this.current === SUSPENSION_MODES.REALISTIC
-                ? SUSPENSION_MODES.FUN
-                : SUSPENSION_MODES.REALISTIC,
-        )
+        return this.set(this.current === 'realistic' ? 'fun' : 'realistic')
     }
 
-    showNotification(mode)
+    notify(mode)
     {
         if(!this.notifications)
             return
 
-        const label = mode === SUSPENSION_MODES.REALISTIC ? '写实' : '娱乐'
+        const label = mode === 'realistic' ? '写实' : '娱乐'
         this.notifications.show(
             `<div class="top"><div class="title">悬架模式：${label}</div></div>`,
             'info',
@@ -425,15 +381,15 @@ export class SuspensionMode
 }
 ```
 
-- [ ] **Step 4: 在 `Game.js` 初始化组件**
+- [ ] **Step 4: Initialize it in `Game.js`**
 
-在 imports 增加：
+Add import:
 
 ```js
 import { SuspensionMode } from './Vehicle/SuspensionMode.js'
 ```
 
-在 `this.notifications = new Notifications()` 之后、`new Options()` 之前增加：
+Immediately after `this.notifications = new Notifications()` add:
 
 ```js
 this.suspensionMode = new SuspensionMode({
@@ -443,41 +399,30 @@ this.suspensionMode = new SuspensionMode({
 })
 ```
 
-- [ ] **Step 5: 运行测试并检查 H 键仍由 Player 独占**
-
-Run:
+- [ ] **Step 5: Verify and commit**
 
 ```bash
 npm run test:vehicle
-node --check sources/Game/Game.js
 node --check sources/Game/Vehicle/SuspensionMode.js
-```
-
-Expected: 全部 PASS；`Player.js` 中 `Keyboard.KeyH` 映射未改动。
-
-- [ ] **Step 6: 提交**
-
-```bash
-git add sources/Game/Game.js sources/Game/Vehicle/SuspensionMode.js tests/vehicle/SuspensionMode.test.js
+node --check sources/Game/Game.js
+git add sources/Game/Vehicle/SuspensionMode.js tests/vehicle/SuspensionMode.test.js sources/Game/Game.js
 git commit -m "feat: add persistent suspension modes"
 ```
 
 ---
 
-### Task 3: 增加设置菜单并保持 UI 与快捷键同步
+### Task 3: Settings Menu Synchronization
 
 **Files:**
-- Modify: `sources/index.html:240-309`
-- Modify: `sources/Game/Options.js:7-119`
+- Modify: `sources/index.html`
+- Modify: `sources/Game/Options.js`
 - Modify: `sources/i18n-zh.js`
 
 **Interfaces:**
 - Consumes: `game.suspensionMode.current`、`.toggle()`、`.events.on('change')`。
-- Produces: `.js-suspension-mode` 设置按钮。
+- Produces: `.js-suspension-mode` button。
 
-- [ ] **Step 1: 在设置表格中加入新行**
-
-在 `Renderer` 行之前插入：
+- [ ] **Step 1: Add a row before Renderer in `sources/index.html`**
 
 ```html
 <tr>
@@ -491,18 +436,18 @@ git commit -m "feat: add persistent suspension modes"
 </tr>
 ```
 
-- [ ] **Step 2: 在中文翻译表加入词条**
+- [ ] **Step 2: Add translation entries**
 
 ```js
 "Suspension mode": "悬架模式",
 "Press J to toggle": "按 J 键切换",
 "Realistic": "写实",
 "Fun": "娱乐",
-"Suspension mode: Realistic": "悬架模式：写实",
-"Suspension mode: Fun": "悬架模式：娱乐",
 ```
 
-- [ ] **Step 3: 在 `Options` 构造函数调用 `setSuspensionMode()`**
+- [ ] **Step 3: Add `setSuspensionMode()` to `Options`**
+
+Call it after `setQuality()`：
 
 ```js
 this.setQuality()
@@ -510,7 +455,7 @@ this.setSuspensionMode()
 this.setRespawn()
 ```
 
-- [ ] **Step 4: 实现 `Options.setSuspensionMode()`**
+Method：
 
 ```js
 setSuspensionMode()
@@ -529,43 +474,37 @@ setSuspensionMode()
 }
 ```
 
-- [ ] **Step 5: 验证 DOM 和语法**
-
-Run:
+- [ ] **Step 4: Verify and commit**
 
 ```bash
 node --check sources/Game/Options.js
 node --check sources/i18n-zh.js
 npm run build
-```
-
-Expected: build PASS；构建产物中存在 `js-suspension-mode`；点击按钮与按 `J` 都更新同一文本。
-
-- [ ] **Step 6: 提交**
-
-```bash
 git add sources/index.html sources/Game/Options.js sources/i18n-zh.js
 git commit -m "feat: add suspension mode controls"
 ```
 
+Expected: button and `J` always show the same mode。
+
 ---
 
-### Task 4: 让资源加载器支持 SU7 可选资源和原车回退
+### Task 4: Optional SU7 Loading and Model Contract
 
 **Files:**
 - Create: `sources/Game/Vehicle/VehicleModelContract.js`
 - Create: `tests/vehicle/VehicleModelContract.test.js`
-- Modify: `sources/Game/ResourcesLoader.js:57-124`
-- Modify: `sources/Game/Game.js:99-181`
-- Modify: `sources/Game/World/World.js:49-60`
+- Modify: `sources/Game/ResourcesLoader.js`
+- Modify: `sources/Game/Game.js`
+- Modify: `sources/Game/World/World.js`
 
 **Interfaces:**
 - Produces: `inspectVehicleModel(root)`、`selectVehicleModel(primary, fallback, logger)`。
-- Resource tuple extension: `[name, path, type, modifier, { optional: true }]`。
+- Extends resource tuple with fifth value `{ optional: true }`。
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write failing contract tests**
 
 ```js
+// tests/vehicle/VehicleModelContract.test.js
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
@@ -576,48 +515,44 @@ import {
 function tree(names)
 {
     return {
-        name: 'root',
         traverse(callback)
         {
-            callback(this)
+            callback({ name: 'root' })
             for(const name of names)
                 callback({ name })
         },
     }
 }
 
-const required = [
-    'chassis',
-    'bodyPainted',
+const complete = [
+    'chassis.001',
+    'bodyPaintedMain',
     'wheelContainer',
-    'wheelSuspension',
+    'wheelSuspensionFront',
     'wheelCylinder',
     'wheelPainted',
 ]
 
-test('accepts complete vehicle and reports missing optional nodes separately', () =>
+test('required nodes match by prefix', () =>
 {
-    const result = inspectVehicleModel(tree(required))
-    assert.equal(result.valid, true)
-    assert.deepEqual(result.missingRequired, [])
-    assert.ok(result.missingOptional.includes('backLights'))
+    assert.equal(inspectVehicleModel(tree(complete)).valid, true)
 })
 
-test('rejects missing required nodes and selects fallback', () =>
+test('invalid SU7 falls back to valid original model', () =>
 {
     const primary = tree([ 'chassis' ])
-    const fallback = tree(required)
-    assert.equal(selectVehicleModel(primary, fallback).model, fallback)
+    const fallback = tree(complete)
+    assert.equal(selectVehicleModel(primary, fallback, { warn() {} }).model, fallback)
 })
 ```
 
-- [ ] **Step 2: 运行测试并确认失败**
+- [ ] **Step 2: Run test and confirm failure**
 
 Run: `npm run test:vehicle`
 
-Expected: FAIL，缺少 `VehicleModelContract.js`。
+Expected: FAIL because `VehicleModelContract.js` does not exist。
 
-- [ ] **Step 3: 创建契约验证器**
+- [ ] **Step 3: Implement prefix-based validation**
 
 ```js
 const REQUIRED = Object.freeze([
@@ -641,13 +576,18 @@ const OPTIONAL = Object.freeze([
     'energy',
 ])
 
+function hasPrefix(names, prefix)
+{
+    return names.some(name => name.toLowerCase().startsWith(prefix.toLowerCase()))
+}
+
 export function inspectVehicleModel(root)
 {
-    const names = new Set()
-    root?.traverse?.(child => names.add(child.name))
+    const names = []
+    root?.traverse?.(child => names.push(child.name ?? ''))
 
-    const missingRequired = REQUIRED.filter(name => !names.has(name))
-    const missingOptional = OPTIONAL.filter(name => !names.has(name))
+    const missingRequired = REQUIRED.filter(prefix => !hasPrefix(names, prefix))
+    const missingOptional = OPTIONAL.filter(prefix => !hasPrefix(names, prefix))
 
     return {
         valid: missingRequired.length === 0,
@@ -662,9 +602,7 @@ export function selectVehicleModel(primary, fallback, logger = console)
     if(primary && primaryResult.valid)
         return { model: primary, source: 'su7', inspection: primaryResult }
 
-    logger.warn?.(
-        `SU7 vehicle fallback: missing ${primaryResult.missingRequired.join(', ') || 'resource'}`,
-    )
+    logger.warn?.(`SU7 vehicle fallback: ${primaryResult.missingRequired.join(', ') || 'resource unavailable'}`)
 
     const fallbackResult = inspectVehicleModel(fallback)
     if(!fallback || !fallbackResult.valid)
@@ -674,15 +612,15 @@ export function selectVehicleModel(primary, fallback, logger = console)
 }
 ```
 
-- [ ] **Step 4: 扩展 `ResourcesLoader` 可选错误处理**
+- [ ] **Step 4: Correctly wrap loader errors with the current file tuple**
 
-在 `error` 函数中读取 `_file[4]`：
+Replace the current error function with：
 
 ```js
-const error = (_file) =>
+const error = (_file, loadError) =>
 {
     const options = _file[4] ?? {}
-    console.log(`Resources > Couldn't load file ${_file[1]}`)
+    console.log(`Resources > Couldn't load file ${_file[1]}`, loadError)
 
     if(options.optional)
     {
@@ -695,54 +633,57 @@ const error = (_file) =>
 }
 ```
 
-- [ ] **Step 5: 在 `Game.js` 同时加载 SU7 和回退模型**
+Replace the `loader.load()` error callback argument with：
 
-替换原 `vehicle` 资源项：
+```js
+(loadError) => error(_file, loadError)
+```
+
+Do not pass `error` directly, because the loader only supplies the error event and not `_file`。
+
+- [ ] **Step 5: Load both vehicle resources in `Game.js`**
+
+Replace the original vehicle tuple with：
 
 ```js
 [ 'vehicleSu7', `vehicle/su7${compressedModelSuffix}.glb${cb}`, 'gltf', undefined, { optional: true } ],
 [ 'vehicleFallback', `vehicle/default${compressedModelSuffix}.glb${cb}`, 'gltf' ],
 ```
 
-- [ ] **Step 6: 在 `World.js` 选择模型**
+- [ ] **Step 6: Select the model in `World.js`**
 
-增加 import：
+Add：
 
 ```js
 import { selectVehicleModel } from '../Vehicle/VehicleModelContract.js'
 ```
 
-替换车辆创建：
+Replace `new VisualVehicle(this.game.resources.vehicle.scene)` with：
 
 ```js
-const vehicleSelection = selectVehicleModel(
+const selection = selectVehicleModel(
     this.game.resources.vehicleSu7?.scene ?? null,
     this.game.resources.vehicleFallback.scene,
 )
 
-this.vehicleSource = vehicleSelection.source
-this.visualVehicle = new VisualVehicle(vehicleSelection.model)
+this.vehicleSource = selection.source
+this.visualVehicle = new VisualVehicle(selection.model)
 ```
 
-- [ ] **Step 7: 运行测试和构建**
+- [ ] **Step 7: Verify and commit**
 
 ```bash
 npm run test:vehicle
 npm run build
-```
-
-Expected: tests PASS；SU7 文件缺失时 build 仍成功，浏览器运行时加载原车且控制台打印一次 fallback 警告。
-
-- [ ] **Step 8: 提交**
-
-```bash
 git add sources/Game/Vehicle/VehicleModelContract.js tests/vehicle/VehicleModelContract.test.js sources/Game/ResourcesLoader.js sources/Game/Game.js sources/Game/World/World.js
 git commit -m "feat: add validated vehicle fallback"
 ```
 
+Expected: tests PASS；SU7 404 时原车仍加载。
+
 ---
 
-### Task 5: 生成雅灰低多边形 SU7 GLB
+### Task 5: Generate the Low-Poly SU7 GLB
 
 **Files:**
 - Create: `scripts/vehicle/generate-su7.py`
@@ -751,26 +692,25 @@ git commit -m "feat: add validated vehicle fallback"
 - Modify: `package.json`
 
 **Interfaces:**
-- Produces: 满足 `VehicleModelContract` 的 GLB 节点树。
-- Consumers: `Game.js` 资源加载、`VisualVehicle`。
+- Produces: GLB with the exact required node prefixes。
+- Consumed by: `Game.js` and `VisualVehicle`。
 
-- [ ] **Step 1: 在 `package.json` 增加可重复命令**
+- [ ] **Step 1: Add repeatable model commands**
+
+Merge these entries into `package.json` scripts：
 
 ```json
 {
-  "scripts": {
-    "vehicle:generate": "blender --background --python scripts/vehicle/generate-su7.py",
-    "vehicle:compress": "gltf-transform optimize static/vehicle/su7.glb static/vehicle/su7-compressed.glb --compress draco",
-    "vehicle:inspect": "gltf-transform inspect static/vehicle/su7-compressed.glb"
-  }
+  "vehicle:generate": "blender --background --python scripts/vehicle/generate-su7.py",
+  "vehicle:compress": "gltf-transform optimize static/vehicle/su7.glb static/vehicle/su7-compressed.glb --compress draco",
+  "vehicle:inspect": "gltf-transform inspect static/vehicle/su7-compressed.glb"
 }
 ```
 
-保留现有脚本，并将这三个字段合并进同一个 `scripts` 对象。
-
-- [ ] **Step 2: 创建 Blender 生成脚本基础结构**
+- [ ] **Step 2: Create the complete Blender generator**
 
 ```python
+# scripts/vehicle/generate-su7.py
 import bpy
 import math
 from pathlib import Path
@@ -778,36 +718,28 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / 'static' / 'vehicle' / 'su7.glb'
 
-YAGREY = (0.32, 0.34, 0.35, 1.0)
-DARK = (0.025, 0.03, 0.035, 1.0)
-GLASS = (0.04, 0.08, 0.10, 0.72)
-WHITE = (1.0, 1.0, 1.0, 1.0)
-RED = (1.0, 0.015, 0.01, 1.0)
-AMBER = (1.0, 0.30, 0.01, 1.0)
-
 
 def reset_scene():
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.object.delete(use_global=False)
 
 
-def material(name, color, metallic=0.0, roughness=0.65, emission=None):
+def make_material(name, color, metallic=0.0, roughness=0.65, emission=None):
     value = bpy.data.materials.new(name)
-    value.diffuse_color = color
     value.use_nodes = True
+    value.diffuse_color = color
     bsdf = value.node_tree.nodes.get('Principled BSDF')
     bsdf.inputs['Base Color'].default_value = color
     bsdf.inputs['Metallic'].default_value = metallic
     bsdf.inputs['Roughness'].default_value = roughness
     bsdf.inputs['Alpha'].default_value = color[3]
-    value.surface_render_method = 'DITHERED' if color[3] < 1 else 'DITHERED'
-    if emission:
+    if emission is not None:
         bsdf.inputs['Emission Color'].default_value = emission
         bsdf.inputs['Emission Strength'].default_value = 3.0
     return value
 
 
-def beveled_cube(name, location, dimensions, mat, bevel=0.08):
+def add_cube(name, location, dimensions, material, bevel=0.08):
     bpy.ops.mesh.primitive_cube_add(location=location)
     obj = bpy.context.object
     obj.name = name
@@ -816,21 +748,20 @@ def beveled_cube(name, location, dimensions, mat, bevel=0.08):
     modifier = obj.modifiers.new('lowPolyBevel', 'BEVEL')
     modifier.width = bevel
     modifier.segments = 1
-    obj.data.materials.append(mat)
+    obj.data.materials.append(material)
     return obj
 
 
-def cylinder(name, location, radius, depth, mat, vertices=12):
+def add_cylinder(name, radius, depth, material, vertices):
     bpy.ops.mesh.primitive_cylinder_add(
         vertices=vertices,
         radius=radius,
         depth=depth,
-        location=location,
         rotation=(math.pi / 2, 0, 0),
     )
     obj = bpy.context.object
     obj.name = name
-    obj.data.materials.append(mat)
+    obj.data.materials.append(material)
     return obj
 
 
@@ -844,86 +775,66 @@ def join(name, objects):
     return objects[0]
 
 
-def parent(child, parent_obj):
-    child.parent = parent_obj
-    child.matrix_parent_inverse = parent_obj.matrix_world.inverted()
-```
+def attach(child, parent):
+    child.parent = parent
 
-- [ ] **Step 3: 在同一脚本创建节点契约和 SU7 轮廓**
 
-```python
+def empty(name, parent=None):
+    obj = bpy.data.objects.new(name, None)
+    bpy.context.collection.objects.link(obj)
+    if parent is not None:
+        attach(obj, parent)
+    return obj
+
+
 def build_vehicle():
-    body_mat = material('雅灰', YAGREY, metallic=0.38, roughness=0.52)
-    dark_mat = material('轮胎与底盘', DARK, metallic=0.05, roughness=0.82)
-    glass_mat = material('玻璃', GLASS, metallic=0.05, roughness=0.18)
-    white_mat = material('前灯', WHITE, roughness=0.25, emission=WHITE)
-    red_mat = material('尾灯', RED, roughness=0.28, emission=RED)
-    amber_mat = material('转向灯', AMBER, roughness=0.28, emission=AMBER)
+    grey = make_material('雅灰', (0.32, 0.34, 0.35, 1), 0.38, 0.52)
+    dark = make_material('Dark', (0.025, 0.03, 0.035, 1), 0.05, 0.82)
+    glass_material = make_material('Glass', (0.04, 0.08, 0.10, 0.72), 0.05, 0.18)
+    white = make_material('WhiteLight', (1, 1, 1, 1), 0, 0.25, (1, 1, 1, 1))
+    red = make_material('RedLight', (1, 0.015, 0.01, 1), 0, 0.28, (1, 0.015, 0.01, 1))
+    amber = make_material('AmberLight', (1, 0.30, 0.01, 1), 0, 0.28, (1, 0.30, 0.01, 1))
 
-    root = bpy.data.objects.new('vehicleRoot', None)
-    bpy.context.collection.objects.link(root)
+    root = empty('vehicleRoot')
+    chassis = empty('chassis', root)
 
-    chassis = bpy.data.objects.new('chassis', None)
-    bpy.context.collection.objects.link(chassis)
-    parent(chassis, root)
+    body = join('bodyPainted', [
+        add_cube('bodyLower', (0.00, 0.00, 0.63), (4.58, 1.82, 0.54), grey, 0.16),
+        add_cube('bodyShoulder', (-0.08, 0.00, 0.94), (3.82, 1.70, 0.34), grey, 0.18),
+        add_cube('hood', (1.43, 0.00, 1.08), (1.55, 1.66, 0.20), grey, 0.12),
+        add_cube('duckTail', (-2.05, 0.00, 1.10), (0.34, 1.55, 0.13), grey, 0.06),
+    ])
+    attach(body, chassis)
 
-    body_parts = [
-        beveled_cube('bodyLower', (0.00, 0.00, 0.63), (4.58, 1.82, 0.54), body_mat, 0.16),
-        beveled_cube('bodyShoulder', (-0.08, 0.00, 0.94), (3.82, 1.70, 0.34), body_mat, 0.18),
-        beveled_cube('hood', (1.43, 0.00, 1.08), (1.55, 1.66, 0.20), body_mat, 0.12),
-        beveled_cube('duckTail', (-2.05, 0.00, 1.10), (0.34, 1.55, 0.13), body_mat, 0.06),
-    ]
-    body = join('bodyPainted', body_parts)
-    parent(body, chassis)
-
-    glass = beveled_cube('glass', (-0.38, 0.00, 1.35), (2.20, 1.42, 0.56), glass_mat, 0.24)
-    glass.scale.x = 1.0
-    parent(glass, chassis)
+    glass = add_cube('glass', (-0.38, 0.00, 1.35), (2.20, 1.42, 0.56), glass_material, 0.24)
+    attach(glass, chassis)
 
     headlights = join('headlights', [
-        beveled_cube('headlightLeft', (2.18, -0.60, 0.96), (0.10, 0.38, 0.13), white_mat, 0.04),
-        beveled_cube('headlightRight', (2.18, 0.60, 0.96), (0.10, 0.38, 0.13), white_mat, 0.04),
+        add_cube('headlightLeft', (2.18, -0.60, 0.96), (0.10, 0.38, 0.13), white, 0.04),
+        add_cube('headlightRight', (2.18, 0.60, 0.96), (0.10, 0.38, 0.13), white, 0.04),
     ])
-    parent(headlights, chassis)
+    attach(headlights, chassis)
 
-    back_lights = beveled_cube('backLights', (-2.27, 0.00, 1.03), (0.08, 1.48, 0.10), red_mat, 0.03)
-    stop_lights = back_lights.copy()
-    stop_lights.data = back_lights.data.copy()
-    stop_lights.name = 'stopLights'
-    bpy.context.collection.objects.link(stop_lights)
-    stop_lights.location.x -= 0.01
-    parent(back_lights, chassis)
-    parent(stop_lights, chassis)
+    back_lights = add_cube('backLights', (-2.27, 0.00, 1.03), (0.08, 1.48, 0.10), red, 0.03)
+    stop_lights = add_cube('stopLights', (-2.28, 0.00, 1.03), (0.06, 1.48, 0.10), red, 0.03)
+    blinker_left = add_cube('blinkerLeft', (-2.29, -0.78, 1.01), (0.06, 0.10, 0.10), amber, 0.02)
+    blinker_right = add_cube('blinkerRight', (-2.29, 0.78, 1.01), (0.06, 0.10, 0.10), amber, 0.02)
+    for light in [ back_lights, stop_lights, blinker_left, blinker_right ]:
+        attach(light, chassis)
 
-    blinker_left = beveled_cube('blinkerLeft', (-2.29, -0.78, 1.01), (0.06, 0.10, 0.10), amber_mat, 0.02)
-    blinker_right = beveled_cube('blinkerRight', (-2.29, 0.78, 1.01), (0.06, 0.10, 0.10), amber_mat, 0.02)
-    parent(blinker_left, chassis)
-    parent(blinker_right, chassis)
-
-    wheel_container = bpy.data.objects.new('wheelContainer', None)
-    bpy.context.collection.objects.link(wheel_container)
-    parent(wheel_container, chassis)
-
-    wheel_suspension = bpy.data.objects.new('wheelSuspension', None)
-    bpy.context.collection.objects.link(wheel_suspension)
-    parent(wheel_suspension, wheel_container)
-
-    wheel_cylinder = cylinder('wheelCylinder', (0, 0, 0), 0.43, 0.24, dark_mat, vertices=16)
-    parent(wheel_cylinder, wheel_suspension)
-
-    wheel_painted = cylinder('wheelPainted', (0, 0, 0), 0.30, 0.255, body_mat, vertices=12)
-    parent(wheel_painted, wheel_suspension)
+    wheel_container = empty('wheelContainer', chassis)
+    wheel_suspension = empty('wheelSuspension', wheel_container)
+    wheel_cylinder = add_cylinder('wheelCylinder', 0.43, 0.24, dark, 16)
+    wheel_painted = add_cylinder('wheelPainted', 0.30, 0.255, grey, 12)
+    attach(wheel_cylinder, wheel_suspension)
+    attach(wheel_painted, wheel_suspension)
 
     return root
-```
 
-- [ ] **Step 4: 在脚本结尾导出 GLB**
 
-```python
 reset_scene()
 build_vehicle()
 OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-
 bpy.ops.export_scene.gltf(
     filepath=str(OUTPUT),
     export_format='GLB',
@@ -934,13 +845,10 @@ bpy.ops.export_scene.gltf(
     export_cameras=False,
     export_lights=False,
 )
-
 print(f'Generated {OUTPUT}')
 ```
 
-- [ ] **Step 5: 生成、压缩并检查模型**
-
-Run:
+- [ ] **Step 3: Generate, compress and inspect**
 
 ```bash
 npm run vehicle:generate
@@ -950,13 +858,13 @@ npm run vehicle:inspect
 
 Expected:
 
-- 两个 GLB 均存在。
-- inspect 输出中包含全部必需节点。
-- 压缩模型小于 5 MiB。
-- 三角面不超过 30,000。
-- 材质不超过 8。
+- Both GLB files exist。
+- Required node prefixes are present。
+- Compressed GLB is below 5 MiB。
+- Triangle count is no more than 30,000。
+- Material count is no more than 8。
 
-- [ ] **Step 6: 提交模型和生成脚本**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add package.json scripts/vehicle/generate-su7.py static/vehicle/su7.glb static/vehicle/su7-compressed.glb
@@ -965,67 +873,58 @@ git commit -m "feat: add low-poly Xiaomi SU7 model"
 
 ---
 
-### Task 6: 让 `VisualVehicle` 兼容 SU7 节点、雅灰车漆和挂点
+### Task 6: Visual Vehicle Adaptation
 
 **Files:**
-- Modify: `sources/Game/World/VisualVehicle.js:63-129, 131-249, 352-387`
+- Modify: `sources/Game/World/VisualVehicle.js`
 
 **Interfaces:**
-- Consumes: `VEHICLE_PROFILE.effects`、经过验证的车辆模型。
-- Produces: 可选灯节点安全访问、正确尾迹位置、SU7 默认雅灰材质。
+- Consumes: `VEHICLE_PROFILE.effects` and validated model nodes。
 
-- [ ] **Step 1: 导入车辆配置**
+- [ ] **Step 1: Import profile**
 
 ```js
 import { VEHICLE_PROFILE } from '../Vehicle/VehicleProfiles.js'
 ```
 
-- [ ] **Step 2: 在 `setParts()` 中增加必需节点防御**
-
-在 traverse 之后增加：
+- [ ] **Step 2: Assert required visual roots after traversal**
 
 ```js
-for(const requiredName of [ 'chassis', 'bodyPainted', 'wheelContainer' ])
+for(const name of [ 'chassis', 'bodyPainted', 'wheelContainer' ])
 {
-    if(!this.parts[requiredName])
-        throw new Error(`Vehicle model missing required visual node: ${requiredName}`)
+    if(!this.parts[name])
+        throw new Error(`Vehicle model missing required visual node: ${name}`)
 }
 ```
 
-- [ ] **Step 3: 将可选车轮涂装和灯节点全部改为条件访问**
+- [ ] **Step 3: Assert wheel template children**
 
-保持现有 `if(this.parts.blinkerLeft)`、`if(this.parts.stopLights)` 风格；在 `setWheels()` 中增加：
+After traversing each cloned wheel：
 
 ```js
 if(!wheel.suspension || !wheel.cylinder)
-    throw new Error('Vehicle wheelContainer must contain wheelSuspension and wheelCylinder')
+    throw new Error('wheelContainer must contain wheelSuspension and wheelCylinder')
 ```
 
-- [ ] **Step 4: 雅灰作为默认车身颜色**
+Continue treating blinkers, stop lights, back lights and painted wheel parts as optional with existing `if(...)` checks。
 
-在 `setPaints()` 添加：
+- [ ] **Step 4: Add 雅灰 default material without removing rewards**
 
 ```js
 this.paints.choices.su7Grey = this.game.materials.createGradient(
     'su7GreyGradient',
-    '#6f7375',
-    '#303437',
+    '#737779',
+    '#313538',
     this.game.materials.debugPanel?.addFolder({ title: 'su7GreyGradient' }),
 )
+
+const rewardPaint = this.game.achievements.rewards.current.name
+this.paints.changeTo(rewardPaint === 'red' ? 'su7Grey' : rewardPaint)
 ```
 
-首次加载时，如果当前成就奖励名称为默认 `red`，改用：
+Keep the existing reward-change event unchanged。
 
-```js
-const initialPaint = this.game.achievements.rewards.current.name === 'red'
-    ? 'su7Grey'
-    : this.game.achievements.rewards.current.name
-this.paints.changeTo(initialPaint)
-```
-
-奖励切换逻辑仍保持原名称，不删除已有奖励。
-
-- [ ] **Step 5: 更新尾迹挂点**
+- [ ] **Step 5: Move boost trails to SU7 rear positions**
 
 ```js
 const { boostLeft, boostRight } = VEHICLE_PROFILE.effects
@@ -1033,36 +932,29 @@ this.boostTrails.leftReference.position.set(boostLeft.x, boostLeft.y, boostLeft.
 this.boostTrails.rightReference.position.set(boostRight.x, boostRight.y, boostRight.z)
 ```
 
-- [ ] **Step 6: 运行语法和构建验证**
+- [ ] **Step 6: Verify and commit**
 
 ```bash
 node --check sources/Game/World/VisualVehicle.js
 npm run build
-```
-
-Expected: PASS；浏览器中车轮、转向灯、刹车灯和尾迹无运行时异常。
-
-- [ ] **Step 7: 提交**
-
-```bash
 git add sources/Game/World/VisualVehicle.js
 git commit -m "feat: adapt visual vehicle to SU7"
 ```
 
 ---
 
-### Task 7: 应用 SU7 碰撞体、轮位与双悬架物理参数
+### Task 7: SU7 Physics, Suspension Behaviour and Camera
 
 **Files:**
-- Modify: `sources/Game/Physics/PhysicsVehicle.js:16-203`
-- Modify: `sources/Game/Player.js:41-150`
-- Modify: `sources/Game/View.js:118-172, 250-359`
+- Modify: `sources/Game/Physics/PhysicsVehicle.js`
+- Modify: `sources/Game/Player.js`
+- Modify: `sources/Game/View.js`
 
 **Interfaces:**
-- Consumes: `VEHICLE_PROFILE`、`getSuspensionProfile()`、`game.suspensionMode.current`。
+- Consumes: `VEHICLE_PROFILE` and `getSuspensionProfile(mode)`。
 - Produces: `PhysicsVehicle.applySuspensionMode(mode)`。
 
-- [ ] **Step 1: 在 `PhysicsVehicle` 导入配置并移除内联参数**
+- [ ] **Step 1: Import profiles in `PhysicsVehicle.js`**
 
 ```js
 import {
@@ -1071,17 +963,15 @@ import {
 } from '../Vehicle/VehicleProfiles.js'
 ```
 
-构造函数中使用：
+Initialize：
 
 ```js
-const initialSuspension = getSuspensionProfile(this.game.suspensionMode.current)
-this.suspensionsHeights = { ...initialSuspension.heights }
-this.suspensionsStiffness = { ...initialSuspension.stiffness }
+const initialProfile = getSuspensionProfile(this.game.suspensionMode.current)
+this.suspensionsHeights = { ...initialProfile.heights }
+this.suspensionsStiffness = { ...initialProfile.stiffness }
 ```
 
-- [ ] **Step 2: 使用集中碰撞体**
-
-在 `setChassis()` 中：
+- [ ] **Step 2: Replace inline colliders**
 
 ```js
 colliders: VEHICLE_PROFILE.colliders.map(collider => ({
@@ -1092,7 +982,7 @@ colliders: VEHICLE_PROFILE.colliders.map(collider => ({
 })),
 ```
 
-- [ ] **Step 3: 使用集中轮位和半径**
+- [ ] **Step 3: Replace wheel offset, radius and active suspension values**
 
 ```js
 this.wheels.settings = {
@@ -1101,22 +991,21 @@ this.wheels.settings = {
     directionCs: { x: 0, y: -1, z: 0 },
     axleCs: { x: 0, y: 0, z: 1 },
     frictionSlip: 0.9,
-    maxSuspensionForce: initialSuspension.maxSuspensionForce,
-    maxSuspensionTravel: initialSuspension.maxSuspensionTravel,
-    sideFrictionStiffness: initialSuspension.sideFrictionStiffness,
-    suspensionCompression: initialSuspension.suspensionCompression,
-    suspensionRelaxation: initialSuspension.suspensionRelaxation,
-    suspensionStiffness: initialSuspension.stiffness.mid,
+    maxSuspensionForce: initialProfile.maxSuspensionForce,
+    maxSuspensionTravel: initialProfile.maxSuspensionTravel,
+    sideFrictionStiffness: initialProfile.sideFrictionStiffness,
+    suspensionCompression: initialProfile.suspensionCompression,
+    suspensionRelaxation: initialProfile.suspensionRelaxation,
+    suspensionStiffness: initialProfile.stiffness.mid,
 }
 ```
 
-- [ ] **Step 4: 实现 `applySuspensionMode(mode)`**
+- [ ] **Step 4: Implement and subscribe `applySuspensionMode()`**
 
 ```js
 applySuspensionMode(mode)
 {
     const profile = getSuspensionProfile(mode)
-
     Object.assign(this.suspensionsHeights, profile.heights)
     Object.assign(this.suspensionsStiffness, profile.stiffness)
     this.wheels.settings.maxSuspensionForce = profile.maxSuspensionForce
@@ -1128,36 +1017,33 @@ applySuspensionMode(mode)
 }
 ```
 
-在 wheels 创建完成后注册：
+After `setWheels()`：
 
 ```js
-this.game.suspensionMode.events.on('change', mode =>
-{
-    this.applySuspensionMode(mode)
-})
+this.game.suspensionMode.events.on('change', mode => this.applySuspensionMode(mode))
 ```
 
-同时为每个 wheel 调用现有 controller setters，确保 `updateSettings()` 写入新参数。
+Ensure `wheels.updateSettings()` calls all corresponding Rapier controller setters already used in `setWheels()`。
 
-- [ ] **Step 5: 在 `Player` 根据模式选择动作状态**
+- [ ] **Step 5: Make Player mode-aware**
 
-导入：
+Import：
 
 ```js
 import { getSuspensionProfile } from './Vehicle/VehicleProfiles.js'
 ```
 
-替换 `activeState`：
+Replace `activeState`：
 
 ```js
 const profile = getSuspensionProfile(this.game.suspensionMode.current)
-const allWheelsActive = this.game.inputs.actions.get('suspensions').active
-const activeState = allWheelsActive
+const allWheels = this.game.inputs.actions.get('suspensions').active
+const activeState = allWheels
     ? profile.allWheelsActiveState
     : profile.partialActiveState
 ```
 
-触屏 tap 中：
+For touch tap：
 
 ```js
 const tapState = getSuspensionProfile(this.game.suspensionMode.current).allWheelsActiveState
@@ -1165,15 +1051,15 @@ for(let i = 0; i < 4; i++)
     this.suspensions[i] = tapState
 ```
 
-- [ ] **Step 6: 在 `View` 使用 SU7 相机配置**
+Do not modify the existing `Keyboard.KeyH` honk mapping。
 
-导入：
+- [ ] **Step 6: Apply camera profile in `View.js`**
 
 ```js
 import { VEHICLE_PROFILE } from './Vehicle/VehicleProfiles.js'
 ```
 
-修改 focus height：
+Use：
 
 ```js
 this.focusPoint.trackedPosition = new THREE.Vector3(
@@ -1181,16 +1067,12 @@ this.focusPoint.trackedPosition = new THREE.Vector3(
     VEHICLE_PROFILE.camera.focusHeight,
     defaultRespawn.position.z,
 )
-```
 
-修改 spherical 参数：
-
-```js
 this.spherical.radius.edges = { ...VEHICLE_PROFILE.camera.radiusEdges }
 this.spherical.radius.nonIdealRatioOffset = VEHICLE_PROFILE.camera.nonIdealRatioOffset
 ```
 
-- [ ] **Step 7: 运行全部自动验证**
+- [ ] **Step 7: Verify and commit**
 
 ```bash
 npm run test:vehicle
@@ -1198,43 +1080,39 @@ node --check sources/Game/Physics/PhysicsVehicle.js
 node --check sources/Game/Player.js
 node --check sources/Game/View.js
 npm run build
-```
-
-Expected: 全部 PASS；写实模式使用 `mid` 而不是 `high` 进行四轮动作；娱乐模式保持原 `high` 跳跃。
-
-- [ ] **Step 8: 提交**
-
-```bash
 git add sources/Game/Physics/PhysicsVehicle.js sources/Game/Player.js sources/Game/View.js
 git commit -m "feat: tune SU7 physics and suspension"
 ```
 
 ---
 
-### Task 8: 浏览器视觉校准、性能预算和 Cloudflare 验收
+### Task 8: Browser, Fallback and Cloudflare Acceptance
 
 **Files:**
-- Modify as needed only: `sources/Game/Vehicle/VehicleProfiles.js`
-- Modify as needed only: `scripts/vehicle/generate-su7.py`
-- Regenerate as needed: `static/vehicle/su7.glb`
-- Regenerate as needed: `static/vehicle/su7-compressed.glb`
-- Update: `docs/superpowers/specs/2026-07-23-xiaomi-su7-vehicle-design.md` status only after acceptance
+- Test only; no planned source edits.
+- A failed check returns to the owning task before this task continues。
+- Modify after user acceptance only: `docs/superpowers/specs/2026-07-23-xiaomi-su7-vehicle-design.md` line 6 status。
 
 **Interfaces:**
-- Final deliverable: 可部署、可驾驶、可回退的 SU7 版本。
+- Produces: reviewed PR and Cloudflare preview deployment。
 
-- [ ] **Step 1: 启动开发环境并记录基准**
+- [ ] **Step 1: Run complete local verification**
 
 ```bash
 npm clean-install
+npm run test
+npm run build
+```
+
+Expected: all commands exit 0。
+
+- [ ] **Step 2: Start the app and confirm SU7 selection**
+
+```bash
 npm run dev
 ```
 
-Expected: 首页加载完成；控制台无 uncaught exception；默认显示 SU7。
-
-- [ ] **Step 2: 检查模型契约和尺寸**
-
-在浏览器控制台确认：
+Browser console：
 
 ```js
 game.world.vehicleSource
@@ -1242,96 +1120,77 @@ game.world.vehicleSource
 
 Expected: `"su7"`。
 
-检查：
+Visually verify：
 
-- 四轮接地且中心与轮拱基本一致。
-- 前轮转向时不穿出车体。
-- 车身碰撞体不明显超出前后保险杠。
-- 相机在默认、缩放和移动端比例下不穿车。
-- 前灯、尾灯、转向灯、刹车灯和尾迹位置正确。
+- Four wheels touch the ground and stay aligned while steering。
+- Camera does not enter the longer body。
+- Headlights, halo-style rear light, blinkers, brake lights and trails are aligned。
+- Collision shape is close to the visible body。
 
-- [ ] **Step 3: 检查双悬架模式**
-
-操作序列：
+- [ ] **Step 3: Verify controls**
 
 ```text
-刷新页面 → 默认写实
-Space → 轻微升降，不高跳
-J → 通知“悬架模式：娱乐”
-Space → 原版夸张弹跳
-数字键盘 1–9 → 独立悬架有效
-H → 只鸣笛，不切换模式
-刷新页面 → 保持娱乐
-J → 切回写实
+Refresh → realistic
+Space → small lift, no high jump
+J → notification says 娱乐
+Space → original high jump
+Numpad 1–9 → independent suspension works
+H → honk only
+Refresh → fun remains selected
+J → back to realistic
 ```
 
-Expected: 所有步骤符合描述，设置菜单文字实时同步。
+Expected: every line behaves exactly as written。
 
-- [ ] **Step 4: 验证回退路径**
+- [ ] **Step 4: Verify runtime fallback**
 
-临时将 `Game.js` 中 SU7 路径改为不存在文件：
+Temporarily change the SU7 path to `vehicle/su7-missing...glb` and run `npm run dev`。
+
+Expected:
 
 ```js
-`vehicle/su7-missing${compressedModelSuffix}.glb${cb}`
+game.world.vehicleSource === 'default'
 ```
 
-Run: `npm run dev`
+The original vehicle loads and one clear warning is logged。Restore the correct path before any commit。
 
-Expected: 页面仍加载原车；`game.world.vehicleSource === 'default'`；控制台只有明确 fallback 日志。验证后立即恢复路径，不能提交临时改动。
+- [ ] **Step 5: Verify asset budgets**
 
-- [ ] **Step 5: 检查模型与 Cloudflare 限制**
+Linux/macOS：
 
 ```bash
 npm run vehicle:inspect
 find static -type f -size +25M -print
-npm run build
 find dist -type f -size +25M -print
 ```
 
-Expected:
-
-- 两次 `find` 均无输出。
-- `su7-compressed.glb` 小于 5 MiB。
-- `npm run build` PASS。
-
-Windows PowerShell 等价命令：
+PowerShell：
 
 ```powershell
 Get-ChildItem static -Recurse -File | Where-Object Length -GT 25MB
 Get-ChildItem dist -Recurse -File | Where-Object Length -GT 25MB
 ```
 
-Expected: 无输出。
+Expected: no over-limit files；`su7-compressed.glb` < 5 MiB。
 
-- [ ] **Step 6: 部署预览分支并检查网络资源**
-
-推送功能分支后，等待 Cloudflare preview deployment。检查：
-
-```text
-/vehicle/su7-compressed.glb         200
-/vehicle/default-compressed.glb     200
-```
-
-Expected: Wrangler 上传成功；无 `Asset too large`；首屏和车辆模型均可加载。
-
-- [ ] **Step 7: 最终全量验证**
-
-```bash
-npm run test
-npm run build
-git status --short
-```
-
-Expected:
-
-- tests 全部 PASS。
-- build PASS。
-- `git status --short` 无输出。
-
-- [ ] **Step 8: 创建 PR**
+- [ ] **Step 6: Push preview branch**
 
 ```bash
 git push -u origin feat/xiaomi-su7-vehicle
+```
+
+Wait for Cloudflare preview and verify HTTP 200 for：
+
+```text
+/vehicle/su7-compressed.glb
+/vehicle/default-compressed.glb
+```
+
+Expected: Wrangler deploy succeeds with no `Asset too large`。
+
+- [ ] **Step 7: Open PR**
+
+```bash
 gh pr create \
   --base main \
   --head feat/xiaomi-su7-vehicle \
@@ -1339,29 +1198,29 @@ gh pr create \
   --body "Adds an 雅灰 low-poly Xiaomi SU7 Pro, validated fallback, SU7 physics tuning, and persistent realistic/fun suspension modes with J-key and settings controls."
 ```
 
-PR 验收必须附：
+PR must include：
 
-- 桌面端前／后／侧三张截图。
-- 移动端一张截图。
-- 写实与娱乐模式各一段短视频或 GIF。
-- `npm run test` 和 `npm run build` 输出。
-- Cloudflare 预览 URL。
+- Desktop front, rear and side screenshots。
+- One mobile screenshot。
+- Realistic and fun mode clips。
+- `npm run test` and `npm run build` results。
+- Cloudflare preview URL。
 
-- [ ] **Step 9: 验收后更新设计状态并提交**
+- [ ] **Step 8: Mark the design implemented only after user acceptance**
 
-把设计文档第 6 行：
+Change：
 
 ```text
 状态：待用户最终审阅
 ```
 
-改为：
+to：
 
 ```text
 状态：已实现并验收
 ```
 
-提交：
+Commit：
 
 ```bash
 git add docs/superpowers/specs/2026-07-23-xiaomi-su7-vehicle-design.md
