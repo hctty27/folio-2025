@@ -1,6 +1,6 @@
 const exactTranslations = new Map(Object.entries({
-    "Bruno's": "Bruno 的作品集",
-    "Bruno's Home": "Bruno 的主页",
+    "Bruno's": "HC 的作品集",
+    "Bruno's Home": "HC 的主页",
     "Interact": "交互",
     "Unstuck": "脱困",
     "Previous": "上一个",
@@ -8,7 +8,7 @@ const exactTranslations = new Map(Object.entries({
     "Open": "打开",
     "Close": "关闭",
     "Welcome!": "欢迎！",
-    "My name is Bruno Simon, and I'm a creative developer (mostly for the web).": "我叫 Bruno Simon，是一名创意开发者（主要从事 Web 开发）。",
+    "My name is Bruno Simon, and I'm a creative developer (mostly for the web).": "我叫 HC，是一名开发者（主要从事 后端 开发）。",
     "This is my portfolio. Please drive around to learn more about me and discover the many secrets of this world.": "这是我的个人作品集。请驾驶小车四处探索，了解更多关于我的信息，并发现这个世界里的诸多秘密。",
     "And don't break anything!": "还有，别弄坏任何东西！",
     "Options": "设置",
