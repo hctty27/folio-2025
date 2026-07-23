@@ -4,7 +4,23 @@ const paths = [
     new URL('../../static/vehicle/su7.glb', import.meta.url),
     new URL('../../static/vehicle/su7-compressed.glb', import.meta.url),
 ]
-const requiredPrefixes = [ 'chassis', 'bodyPainted', 'wheelContainer', 'wheelSuspension', 'wheelCylinder', 'wheelPainted' ]
+
+const requiredNames = [
+    'chassis',
+    'bodyPainted',
+    'wheelContainer',
+    'wheelSuspension',
+    'wheelCylinder',
+    'wheelPainted',
+    'antenna',
+    'antennaHeadReference',
+    'antennaHead',
+    'antennaHeadAxle',
+    'energy',
+    'cell1',
+    'cell2',
+    'cell3',
+]
 
 function readJsonChunk(buffer)
 {
@@ -27,6 +43,22 @@ function readJsonChunk(buffer)
     throw new Error('GLB JSON chunk not found')
 }
 
+function nodeByName(json, name)
+{
+    const index = json.nodes.findIndex(node => node.name === name)
+    if(index === -1)
+        throw new Error(`Missing node ${name}`)
+    return { index, node: json.nodes[index] }
+}
+
+function assertRenderable(json, name)
+{
+    const { node } = nodeByName(json, name)
+    const primitive = json.meshes?.[node.mesh]?.primitives?.[0]
+    if(typeof node.mesh !== 'number' || typeof primitive?.material !== 'number')
+        throw new Error(`${name} must be a renderable mesh with a material`)
+}
+
 for(const path of paths)
 {
     const info = await stat(path)
@@ -34,11 +66,29 @@ for(const path of paths)
         throw new Error(`${path.pathname} exceeds 5 MiB: ${info.size}`)
 
     const json = readJsonChunk(await readFile(path))
-    const names = (json.nodes ?? []).map(node => node.name ?? '')
-    const missing = requiredPrefixes.filter(prefix => !names.some(name => new RegExp(`^${prefix}`, 'i').test(name)))
+    for(const name of requiredNames)
+        nodeByName(json, name)
 
-    if(missing.length)
-        throw new Error(`${path.pathname} is missing nodes: ${missing.join(', ')}`)
+    const { node: body } = nodeByName(json, 'bodyPainted')
+    if(!(body.scale[0] > body.scale[2] && body.scale[2] > body.scale[1]))
+        throw new Error('SU7 body axes must be X length, Y height and Z width')
+
+    const { node: antenna } = nodeByName(json, 'antenna')
+    const { index: referenceIndex } = nodeByName(json, 'antennaHeadReference')
+    const { node: antennaHead } = nodeByName(json, 'antennaHead')
+    const { index: axleIndex } = nodeByName(json, 'antennaHeadAxle')
+    if(!antenna.children?.includes(referenceIndex))
+        throw new Error('antenna must contain antennaHeadReference')
+    if(!antennaHead.children?.includes(axleIndex))
+        throw new Error('antennaHead must contain antennaHeadAxle')
+
+    for(const name of [ 'energy', 'cell1', 'cell2', 'cell3', 'antennaHeadAxle' ])
+        assertRenderable(json, name)
+
+    const { node: wheel } = nodeByName(json, 'wheelCylinder')
+    if(wheel.rotation)
+        throw new Error('wheelCylinder must stay aligned to the Z axle')
+
     if((json.materials?.length ?? 0) > 8)
         throw new Error(`${path.pathname} has too many materials: ${json.materials.length}`)
 
