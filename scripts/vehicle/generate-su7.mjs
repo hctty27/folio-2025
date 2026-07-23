@@ -1,20 +1,125 @@
 import { mkdir, writeFile } from 'node:fs/promises'
-import { gunzipSync } from 'node:zlib'
 
-const compressedBase64 = 'H4sIALD0YWoC/+1ZXWgb2RWWo/gnthzHsZPNr+PI+QXFmXvn3+CZ7JrdbJZssvlh96HJgyxNLBFZ8krjbNIQaCmhlC3krbAtbAvJcwotlDysxyF9bEu70BIKfdh93n0qpNCHQu+ZOXd0JI+V2BGlDytw7qdzzpz7nXPvPfeMslC5+s6WVCr11XQq9cX+VOq9Kxcv3M02Cl7Vy84ouQg1sjPfu5ut1oohUq7fu57L5hsNz8/O3M3e8uqNcq2ancnyaSWbyy6IB+p5v1YXkpLvLzVmTp9eKPul5fnpQm3x9GL5plcsnfbr5UWvUcreE54KBa/RqNWjWYTNUq3qVf2rd5YEBZ1xPZf1Q5y9Mvfm+Tcviznml2/c8Ooflr1PQpKF2nJVcGEqz2UX87eFH64KiovlakQ3l+TWiN1++PacCk7v+N7FGzfCsJTWOVg8B9fiKaa5HX50rjKDW1pOmbYtBT7MVkxVswxViCyz1SrmdWqtg1PKNI88KIzZXLG5DbI1LpIDekmeeByDocgYGOtqmtTmUsQrwaZ5FJFmGpZqMt3KsWnWKjNEnsxIxC2DKZzbejNPwoMuDHQWJsESWTF0ppqQmTUPbSozWkzbbNLWu5oZvZkZg2wgLUqDrauGqcFu0dRoqU1DJIppHBJjRzEyTTcNkzdXjE+z8HmmaLaiMROSpLbsHss2wiy1e9hUlow4BDUOwexqksx4BktOAIckXHwlyouiGSrXDQvy0po8Tg+WGp0srpqKoeiaCZlFD4YmpJypYWLaXbx+DFZyDMJ9Gx/hF0SWpYjlMRkEpLeGEOox4iiC0EnzkVPhM6/P2U7mHFUdk6mWbZpKdAQjArpha5alJ+eQxhDtZqYxw1YZ08Mg9LX1LTIzVdNUbd1Qu1GwlU3HlMBngyG98sZ6yYlj9NqJa7bW3ZrNmveCFlc/KERRBKJgc103tVyiiLXdYGT1E+zXka11srlskdtHa97S3a3jrHlXcKOZLZVFYXHV0pilQ3lKEDHViIJXbcU2dXrHJdivI1vrpAtR6YlRMYaXkcpMUXFs2NmJMi3iyQ3ODUVTTRrX2gfWFa5xA30mdImyAc0vQjzzteKdD/Llqu8Vz3q1Rc+v3xHhebf9er4BDelSvQYNpVfMzvj1ZU90mEui2Sz75VvoJ++L7nN+2fdC8w8uXjl39dzFCyINwrRcLZYLoIDzJhresDtYzPtevZyvCOm9MN3IZKEiuuDuclApB57IgbVwKHn5YqW8UPKTiTRK+XATCInYHY3sqzPRKRMtkQlvYTKfL9w8/3Im87XbkTzkA/tMCQ+HaAs16/qr8zMpPyORn9rCr+HXljbHT4cyz8R1wab1DTC0NspwvlKu3vTq570b/kYpGuHZhH82QNB+OUEtieBlyOL/hCFTNkrxk5LnVebuCKJFr96RYwGNhLLkQUTieE9D/avni+VlKAHiusq9RjnhlDtc5gnk9bXkO9W2ztzh9aVJXmWvQ15rIa8mkjfWJT8n1n1T6bdaQoDmZPMh6K8QAhT0601B5HFpvv6+5+crlXLhcm15oVQV84Pv+XzDm6tVavV38oXwBw64+g3FtDRVvJByXbyHwRubahqaaC4ti6s6tzXY82r8hYVKU5QSRcxbl+6lR9GQQtXH2ZtSFYoJJvrtireQr/qTZ+t5SG2xtjxf8a6Ui5CiGyIGDxZlIzEoMa+INDTBzLAMbmrixctSVJszeAPhIdKbGmiWW2QsOSZmJcUULhDGdBau0i4EI9IKqYXfYtoXZt2MJyYcCo+3WG40xD5L8g6tLnJ/V17BXeIvJqfMmQ2lk+wnXKoOAekbikioYI8qit6M6Wq+XJk839WgmuFE4cGlqtAoQdzFoMKYmhG9Fd1d3TkwZuty6OusWesR0jucEstaLzq5IOW61xXurUc9fF3VWlgaVvS2R/eaZanrc9cSuWvkdL/p1WuTH8H9kBwCrBL+uty8Tmr1SlGYF0rlSrHuwesEo9fNLa9ULlS8y7Wa32rFqVWhJOpKudFqoea0nJ4zcmbOytk5prS0OM23i2z09gGXRFvPH2tYYiceq3liexyr1cTuNFZrya1hrNfX6cxiA2NNX1Sr+iK28BTQvLI19/iV5caSVw1/2G81FXVUbAVt3ZYrntxcpzWIDayOvUNsZsPuiN5Wo/0BL7LnveqCDymyTN7Uw9ss2oTfoxfdtvde8rTOQw7rGAttqzm3Oplb8Mtui7mmdDAXrxNt9kzTOtlzRdkIHaZZbfSZzTvZG5ayIT4W/FcItbeNTuY2VzZgzpX2bHY2Z9Apvro5V6x2805rpYrktO0cpVNuVMNso6ObnfhoXGvzr7JOa6XphrLW/vq9ycnJgbFU6q1zF1Lwgf/X6xF/GfE3LP62p6JPGnUZlI2gfCvqMijbgfJe1GVQNoryPtRlULYT5f2oy6BsDOUDqMugbBzl21CXQdkulA+iLoOy3SgfQl0GZW+gvAfjTOGYQdkWjLMHx2GUpTHOLThuR9lWjDON4wjKejHOrTjuQFkfxtmL4yjK+jHOPhx3omwA4+zHcQxl2zDOARzHUTaIcW7DcRfKhjD2QRx3oyyFsQ/hCLr734w+PXntQfD4bH5VVceeDj5/OBvh9NNrD545Ef7tqjB1AadSZ1a/vWQh/kHw7tffD/GTiV7320u3Qyz8uXfHp9HmK/fBsxehn0P3h86IEX2OnRFzrQD+0x8zZyQHwsclfFzCxyV8XMLHJXxcwsclfFzCxyV8XMLHJXxcel76yDrR89JH1omelz6yTvS89JF1kvuzv+2MyP05gFieEbk/tyGWZ0Tuz0HE8ozI/TmEWJ6R3raz2hfz+RWupSXWSF0df3w2xJBbyGOEUyJHP5VyGEP8888+cz+eHUR57MclflzixyV+XOLHJX7cHoxH5rUn1fzI/G9BHc1lGuPqITnox+9pkss+1Es/Mv99ZL36SY62YZ5kXZL5HyC5lTVI7okR1A2TujWMculvBJ/bjnrpR9af7aR2jZC6/fsXA2dEvpyPZ99blfjR0koA+PHZr2M5YJCfvDYS20ss5dJeYukHbRwyl0t8OmQul/h0yFwu8emQuf7v1vfJxK6n97/5UvCcXSXYBXztwRZXyhGLfbsjtic4lEt7gt3nD8efPn/4FwfqFsGhXNQ4V8oRi3lHY3uCQ7m0J1jUtl2ifv7ZmR38aFVi4AB48HnalXLAII/qbWQvsZRLe4mlH7Shc7nEp0vmcolPl8zlEp8umcvtadsLW9v2QC/iXlLzUmSd5br2knrdS/ZMH+k5+khd7SfntR/HNKn1g4hlXd1Garg8w2lS6zOkDgyRO3eY1ALZU6XIuZfnfJj0YLJWpEmvtgOx7ENGSA82gmOa9Go7Ecs+ZJT0YKM4pkmvNo5Y9iFjpAcbwzFNerXdiGUfsov0YLtwTJNebQ/iPah7A/FexHvRfg/a70O8D3V7Ee9HvB/t96H9AcQHULcf8UHEB9H+ANpPIJ5A3UHEhxAfQvsJtJ9EPIm6Q4gPIz6M9pNon0WcRd1hxFOIp9A+i/ZHEB9B3RTio4iPov0RtD+G+BjqjiI+jvg42h9D+xOIT6DuOOKTiE+i/QlSd0/geBL/ZI9ykvQl8iPu/uBfJ/7hJGCH2DjL8186/9kx4IANwc6/D/zGOVL6YSgnOBzhO8gJDp+D50FOsPPF3/85BXODnGCwD4i9xOA/IP4lhnkCwkdimCcg/CV2xDxivvoRjF1iaR8Q+4D4D4j/gPAJCJ+A8A8I/1D+/tTvHsF8ICdY5icg+QlIPgOSz4DkPyD5D8h6BWS9Qvl3dfu7up1Ut3sQ95C6LevG3oS68bO5oeDyk8+dBOwQG+eX/k+cy08mHLAhOBzhe/RsjJ3B8V9PgS+QEwz2AbGXGJ4LiP+g6f9z8fzpI8hNYmkfEPuA+A+I/1A+cPFHj+B5kBMs+QeEf0DiDUi8Ac3JhfkdgXivnU3A1Mb5xd/+Ovvg2fIs2BDswAjfo2dj7BQ+7Z8CXyAnGOxXiL3E4H+F+F9p+n+xUvj0x1PITWJpv0LsV4j/FeI/lI9f+sNDeB7kBEv+K4T/Col3hcQbyv8L11PVQ+AuAAA='
+const chunks = []
+const bufferViews = []
+const accessors = []
+const meshes = []
+const nodes = []
+const materials = []
+let byteOffset = 0
 
-try
+function align4(value) { return (value + 3) & ~3 }
+function addChunk(buffer, target)
 {
-    console.log(`Decoding embedded SU7 asset (${compressedBase64.length} base64 characters)`)
-    const glb = gunzipSync(Buffer.from(compressedBase64, 'base64'))
-    const outputDirectory = new URL('../../static/vehicle/', import.meta.url)
-    await mkdir(outputDirectory, { recursive: true })
-    await writeFile(new URL('su7.glb', outputDirectory), glb)
-    await writeFile(new URL('su7-compressed.glb', outputDirectory), glb)
-    console.log(`Generated SU7 GLB assets (${glb.byteLength} bytes each)`)
+    const aligned = align4(byteOffset)
+    if(aligned > byteOffset) chunks.push(Buffer.alloc(aligned - byteOffset))
+    byteOffset = aligned
+    const index = bufferViews.length
+    bufferViews.push({ buffer: 0, byteOffset, byteLength: buffer.length, ...(target ? { target } : {}) })
+    chunks.push(buffer)
+    byteOffset += buffer.length
+    return index
 }
-catch(error)
+function addAccessor(array, componentType, type, target, min, max)
 {
-    console.error('SU7_GENERATOR_ERROR:', error?.stack ?? error)
-    process.exitCode = 1
+    const buffer = Buffer.from(array.buffer, array.byteOffset, array.byteLength)
+    const view = addChunk(buffer, target)
+    const count = array.length / ({ SCALAR:1, VEC2:2, VEC3:3, VEC4:4 }[type])
+    const index = accessors.length
+    accessors.push({ bufferView:view, componentType, count, type, ...(min?{min}:{}), ...(max?{max}:{}) })
+    return index
 }
+function addMaterial(name, color, metallic=0, roughness=0.7, emissive=null)
+{
+    const index = materials.length
+    materials.push({ name, pbrMetallicRoughness:{ baseColorFactor:color, metallicFactor:metallic, roughnessFactor:roughness }, ...(emissive?{emissiveFactor:emissive}:{}), doubleSided:false })
+    return index
+}
+function geometryAccessors(positions, indices)
+{
+    const p = new Float32Array(positions)
+    const i = new Uint16Array(indices)
+    const mins=[Infinity,Infinity,Infinity], maxs=[-Infinity,-Infinity,-Infinity]
+    for(let n=0;n<p.length;n+=3) for(let j=0;j<3;j++){ mins[j]=Math.min(mins[j],p[n+j]); maxs[j]=Math.max(maxs[j],p[n+j]) }
+    return {
+        position:addAccessor(p,5126,'VEC3',34962,mins,maxs),
+        indices:addAccessor(i,5123,'SCALAR',34963,[0],[Math.max(...i)]),
+    }
+}
+const cube = geometryAccessors([
+    -0.5,-0.5,-0.5, 0.5,-0.5,-0.5, 0.5,0.5,-0.5, -0.5,0.5,-0.5,
+    -0.5,-0.5, 0.5, 0.5,-0.5, 0.5,0.5, 0.5, -0.5,0.5, 0.5,
+], [0,1,2,0,2,3,4,6,5,4,7,6,0,4,5,0,5,1,1,5,6,1,6,2,2,6,7,2,7,3,3,7,4,3,4,0])
+function cylinderGeometry(segments=16)
+{
+    const pos=[], idx=[]
+    for(let z of [-0.5,0.5]) for(let s=0;s<segments;s++){ const a=s/segments*Math.PI*2; pos.push(Math.cos(a),Math.sin(a),z) }
+    const bottom=pos.length/3; pos.push(0,0,-0.5); const top=pos.length/3; pos.push(0,0,0.5)
+    for(let s=0;s<segments;s++){
+        const n=(s+1)%segments, a=s, b=n, c=segments+s, d=segments+n
+        idx.push(a,b,d,a,d,c, bottom,b,a, top,c,d)
+    }
+    return geometryAccessors(pos,idx)
+}
+const cylinder = cylinderGeometry()
+
+const grey=addMaterial('雅灰',[0.32,0.34,0.35,1],0.38,0.52)
+const dark=addMaterial('轮胎',[0.025,0.03,0.035,1],0.05,0.82)
+const glass=addMaterial('玻璃',[0.04,0.08,0.10,0.72],0.05,0.18)
+const white=addMaterial('前灯',[1,1,1,1],0,0.25,[1,1,1])
+const red=addMaterial('尾灯',[1,0.015,0.01,1],0,0.28,[1,0.015,0.01])
+const amber=addMaterial('转向灯',[1,0.30,0.01,1],0,0.28,[1,0.30,0.01])
+
+function addMesh(name, geo, material)
+{
+    const index=meshes.length
+    meshes.push({name:`${name}Geometry`,primitives:[{attributes:{POSITION:geo.position},indices:geo.indices,material}]})
+    return index
+}
+function addNode(name, parent, mesh=null, translation=null, scale=null, rotation=null)
+{
+    const index=nodes.length
+    nodes.push({name,...(mesh!==null?{mesh}:{}),...(translation?{translation}:{}),...(scale?{scale}:{}),...(rotation?{rotation}:{}),children:[]})
+    if(parent!==null) nodes[parent].children.push(index)
+    return index
+}
+function box(name,parent,pos,size,material)
+{
+    return addNode(name,parent,addMesh(name,cube,material),pos,size)
+}
+const root=addNode('vehicleRoot',null)
+const chassis=addNode('chassis',root)
+box('bodyPainted',chassis,[0,0,0.63],[4.55,1.82,0.48],grey)
+box('bodyPaintedShoulder',chassis,[-0.12,0,0.95],[3.7,1.70,0.32],grey)
+box('bodyPaintedHood',chassis,[1.42,0,1.08],[1.55,1.66,0.18],grey)
+box('bodyPaintedDuckTail',chassis,[-2.05,0,1.10],[0.30,1.52,0.12],grey)
+box('glass',chassis,[-0.40,0,1.34],[2.15,1.40,0.52],glass)
+box('headlights',chassis,[2.20,-0.60,0.96],[0.10,0.36,0.12],white)
+box('headlightsRight',chassis,[2.20,0.60,0.96],[0.10,0.36,0.12],white)
+box('backLights',chassis,[-2.28,0,1.02],[0.08,1.46,0.10],red)
+box('stopLights',chassis,[-2.29,0,1.02],[0.06,1.46,0.10],red)
+box('blinkerLeft',chassis,[-2.30,-0.77,1.01],[0.06,0.10,0.10],amber)
+box('blinkerRight',chassis,[-2.30,0.77,1.01],[0.06,0.10,0.10],amber)
+const wheelContainer=addNode('wheelContainer',chassis)
+const wheelSuspension=addNode('wheelSuspension',wheelContainer)
+const wheelRot=[Math.SQRT1_2,0,0,Math.SQRT1_2]
+addNode('wheelCylinder',wheelSuspension,addMesh('wheelCylinder',cylinder,dark),[0,0,0],[0.43,0.43,0.24],wheelRot)
+addNode('wheelPainted',wheelSuspension,addMesh('wheelPainted',cylinder,grey),[0,0,0],[0.30,0.30,0.255],wheelRot)
+for(const name of ['antenna','cell1','cell2','cell3','energy']) addNode(name,chassis)
+for(const node of nodes) if(node.children.length===0) delete node.children
+
+const binary=Buffer.concat(chunks)
+const json={asset:{version:'2.0',generator:'folio-2025 SU7 generator'},scene:0,scenes:[{nodes:[root]}],nodes,meshes,materials,accessors,bufferViews,buffers:[{byteLength:binary.length}]}
+let jsonBuffer=Buffer.from(JSON.stringify(json),'utf8')
+jsonBuffer=Buffer.concat([jsonBuffer,Buffer.alloc(align4(jsonBuffer.length)-jsonBuffer.length,0x20)])
+const binPadding=align4(binary.length)-binary.length
+const binBuffer=Buffer.concat([binary,Buffer.alloc(binPadding)])
+const header=Buffer.alloc(12); header.write('glTF',0); header.writeUInt32LE(2,4); header.writeUInt32LE(12+8+jsonBuffer.length+8+binBuffer.length,8)
+const jsonHeader=Buffer.alloc(8); jsonHeader.writeUInt32LE(jsonBuffer.length,0); jsonHeader.writeUInt32LE(0x4E4F534A,4)
+const binHeader=Buffer.alloc(8); binHeader.writeUInt32LE(binBuffer.length,0); binHeader.writeUInt32LE(0x004E4942,4)
+const glb=Buffer.concat([header,jsonHeader,jsonBuffer,binHeader,binBuffer])
+const outputDirectory=new URL('../../static/vehicle/',import.meta.url)
+await mkdir(outputDirectory,{recursive:true})
+await writeFile(new URL('su7.glb',outputDirectory),glb)
+await writeFile(new URL('su7-compressed.glb',outputDirectory),glb)
+console.log(`Generated SU7 GLB assets (${glb.byteLength} bytes each)`)
