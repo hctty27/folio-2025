@@ -7,6 +7,15 @@ on:
     paths:
       - .github/workflows/su7-integration.yml
       - scripts/vehicle/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/su7-integration.yml
+      - scripts/vehicle/**
+      - sources/**
+      - tests/vehicle/**
+      - package.json
 
 permissions:
   contents: write
@@ -46,6 +55,7 @@ jobs:
         run: npm run build
 
       - name: Commit verified integration
+        if: github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
