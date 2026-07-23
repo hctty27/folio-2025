@@ -24,7 +24,7 @@ on:
       - package.json
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -34,7 +34,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'push' && github.ref_name || '' }}
           fetch-depth: 1
           show-progress: false
 
@@ -47,21 +46,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Bump SU7 asset cache version
-        if: github.event_name == 'push' && github.ref_name == 'feat/su7-full-vehicle-rig'
-        run: |
-          node --input-type=module <<'NODE'
-          import { readFile, writeFile } from 'node:fs/promises'
-          const path = 'sources/Game/Game.js'
-          const before = '`vehicle/su7${compressedModelSuffix}.glb${cb}`'
-          const after = '`vehicle/su7${compressedModelSuffix}.glb?cb=2`'
-          const source = await readFile(path, 'utf8')
-          if(source.includes(before))
-              await writeFile(path, source.replace(before, after))
-          else if(!source.includes(after))
-              throw new Error('SU7 resource URL not found')
-          NODE
-
       - name: Regenerate SU7 assets
         run: npm run vehicle:generate
 
@@ -69,7 +53,6 @@ jobs:
         run: npm run vehicle:inspect
 
       - name: Verify generated assets are committed
-        if: github.event_name == 'pull_request'
         run: git diff --exit-code -- static/vehicle/su7.glb static/vehicle/su7-compressed.glb
 
       - name: Run vehicle tests
@@ -77,13 +60,3 @@ jobs:
 
       - name: Build production bundle
         run: npm run build
-
-      - name: Commit verified full-rig assets
-        if: github.event_name == 'push' && github.ref_name == 'feat/su7-full-vehicle-rig'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add sources/Game/Game.js static/vehicle/su7.glb static/vehicle/su7-compressed.glb
-          git diff --cached --quiet && exit 0
-          git commit -m "feat: commit complete SU7 vehicle assets"
-          git push origin HEAD:feat/su7-full-vehicle-rig
