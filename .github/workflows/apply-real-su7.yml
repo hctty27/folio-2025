@@ -1,6 +1,7 @@
 name: Apply verified real SU7 vehicle
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
