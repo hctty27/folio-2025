@@ -1,0 +1,1 @@
+Temporary marker for direct SU7 binary installation.
