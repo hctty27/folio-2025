@@ -1,6 +1,7 @@
 import './i18n-zh.js'
 import './threejs-override.js'
 import { Game } from './Game/Game.js'
+import './su7-patch.js'
 import consoleLog from './data/consoleLog.js'
 
 if(import.meta.env.VITE_LOG)

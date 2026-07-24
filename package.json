@@ -4,8 +4,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "vite --mode development",
-    "build": "vite build --mode production",
+    "validate:su7": "node scripts/validate-su7.mjs",
+    "dev": "npm run validate:su7 && vite --mode development",
+    "build": "npm run validate:su7 && vite build --mode production",
     "preview": "vite preview",
     "compress": "node scripts/compress.js static/"
   },
@@ -29,7 +30,7 @@
     "howler": "^2.2.4",
     "msgpack-lite": "^0.1.26",
     "normalize-wheel": "^1.0.1",
-    "seedrandom": "^3.0.5",
+    "seedrandom": "^0.5.5",
     "sharp": "^0.34.5",
     "stats-gl": "^3.6.0",
     "stylus": "^0.64.0",
