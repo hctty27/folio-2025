@@ -4,8 +4,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "vite --mode development",
-    "build": "vite build --mode production",
+    "prepare:su7": "node scripts/prepare-real-su7.mjs",
+    "dev": "npm run prepare:su7 && vite --mode development",
+    "build": "npm run prepare:su7 && vite build --mode production",
     "preview": "vite preview",
     "compress": "node scripts/compress.js static/"
   },
